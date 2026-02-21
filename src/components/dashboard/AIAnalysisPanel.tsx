@@ -32,7 +32,7 @@ export function AIAnalysisPanel({ params, result }: AIAnalysisPanelProps) {
           params: {
             probability: params.probability,
             leverage: params.leverage,
-            riskTolerance: params.riskTolerance,
+            positionSize: params.positionSize,
             bankroll: params.bankroll,
             marketTitle: params.marketTitle,
             marketUrl: params.marketUrl,

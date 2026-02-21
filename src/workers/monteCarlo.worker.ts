@@ -3,24 +3,14 @@
 interface WorkerParams {
   probability: number;
   leverage: number;
-  riskTolerance: string;
+  positionSize: number; // 0-1 fraction
   numSimulations: number;
   bankroll: number;
   numBets: number;
 }
 
-function getPositionSize(riskTolerance: string): number {
-  switch (riskTolerance) {
-    case "conservative": return 0.05;
-    case "moderate": return 0.15;
-    case "aggressive": return 0.30;
-    default: return 0.15;
-  }
-}
-
 function runSimulation(params: WorkerParams) {
-  const { probability, leverage, numSimulations, bankroll, numBets } = params;
-  const positionSize = getPositionSize(params.riskTolerance);
+  const { probability, leverage, numSimulations, bankroll, numBets, positionSize } = params;
   
   const finalValues: number[] = [];
   const equityCurves: number[][] = [];

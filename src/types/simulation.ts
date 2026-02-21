@@ -1,9 +1,7 @@
-export type RiskTolerance = "conservative" | "moderate" | "aggressive";
-
 export interface SimulationParams {
   probability: number; // 0-1
   leverage: number; // 1-10
-  riskTolerance: RiskTolerance;
+  positionSize: number; // 0.01-0.50, fraction of bankroll per bet
   numSimulations: number;
   bankroll: number;
   numBets: number; // number of sequential bets per simulation
