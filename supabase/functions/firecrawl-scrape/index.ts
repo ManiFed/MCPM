@@ -13,82 +13,108 @@ function detectPlatform(url: string): string {
   return "Unknown";
 }
 
-function extractPolymarketProbability(html: string): { probability: number | null; title: string } {
-  // Polymarket often has JSON-LD or meta tags with probability data
-  let title = "";
-  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (titleMatch) title = titleMatch[1].replace(/ \| Polymarket.*$/, "").trim();
-
-  // Look for probability in various patterns
-  // Pattern: "probability":0.XX or outcome price data
-  const probPatterns = [
-    /"probability"\s*:\s*(0?\.\d+)/,
-    /"outcomePrices"\s*:\s*\[\s*"(0?\.\d+)"/,
-    /"price"\s*:\s*(0?\.\d+)/,
-    /data-probability="(0?\.\d+)"/,
-    /"yes"\s*:\s*(0?\.\d+)/i,
-  ];
-
-  for (const pattern of probPatterns) {
-    const match = html.match(pattern);
-    if (match) {
-      const prob = parseFloat(match[1]);
-      if (prob > 0 && prob < 1) return { probability: prob, title };
+function extractSlug(url: string, platform: string): string | null {
+  switch (platform) {
+    case "Polymarket": {
+      // https://polymarket.com/event/some-slug or /event/some-slug/some-market
+      const match = url.match(/polymarket\.com\/event\/([^/?#]+)(?:\/([^/?#]+))?/);
+      return match ? (match[2] || match[1]) : null;
     }
+    case "Metaculus": {
+      // https://www.metaculus.com/questions/12345/slug-here/
+      const match = url.match(/metaculus\.com\/questions\/(\d+)/);
+      return match ? match[1] : null;
+    }
+    case "Manifold": {
+      // https://manifold.markets/username/slug-here
+      const match = url.match(/manifold\.markets\/([^/]+)\/([^/?#]+)/);
+      return match ? match[2] : null;
+    }
+    default:
+      return null;
   }
-
-  // Try to find percentage text like "65%" near key words
-  const pctMatch = html.match(/(\d{1,2})%\s*(?:chance|probability|yes)/i);
-  if (pctMatch) {
-    return { probability: parseInt(pctMatch[1]) / 100, title };
-  }
-
-  return { probability: null, title };
 }
 
-function extractMetaculusProbability(html: string): { probability: number | null; title: string } {
-  let title = "";
-  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (titleMatch) title = titleMatch[1].replace(/ - Metaculus.*$/, "").trim();
-
-  const patterns = [
-    /"community_prediction"\s*:\s*(0?\.\d+)/,
-    /"q2"\s*:\s*(0?\.\d+)/,
-    /"median"\s*:\s*(0?\.\d+)/,
-    /(\d{1,2})%\s*community/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match) {
-      const val = parseFloat(match[1]);
-      return { probability: val > 1 ? val / 100 : val, title };
+async function fetchPolymarket(slug: string) {
+  // Try fetching as a market slug first
+  const marketResp = await fetch(`https://gamma-api.polymarket.com/markets/slug/${slug}`);
+  if (marketResp.ok) {
+    const data = await marketResp.json();
+    if (data && data.outcomePrices) {
+      const prices = JSON.parse(data.outcomePrices);
+      const yesPrice = parseFloat(prices[0]);
+      return {
+        probability: yesPrice,
+        title: data.question || data.title || slug,
+        platform: "Polymarket",
+      };
     }
   }
 
-  return { probability: null, title };
+  // Try as event slug — get first market from event
+  const eventResp = await fetch(`https://gamma-api.polymarket.com/events/slug/${slug}`);
+  if (eventResp.ok) {
+    const event = await eventResp.json();
+    if (event?.markets?.length > 0) {
+      const market = event.markets[0];
+      if (market.outcomePrices) {
+        const prices = JSON.parse(market.outcomePrices);
+        return {
+          probability: parseFloat(prices[0]),
+          title: market.question || event.title || slug,
+          platform: "Polymarket",
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
-function extractManifoldProbability(html: string): { probability: number | null; title: string } {
-  let title = "";
-  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (titleMatch) title = titleMatch[1].replace(/ - Manifold.*$/, "").trim();
-
-  const patterns = [
-    /"probability"\s*:\s*(0?\.\d+)/,
-    /"prob"\s*:\s*(0?\.\d+)/,
-    /(\d{1,2})%\s*chance/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match) {
-      const val = parseFloat(match[1]);
-      return { probability: val > 1 ? val / 100 : val, title };
+async function fetchMetaculus(questionId: string) {
+  const resp = await fetch(`https://www.metaculus.com/api/posts/${questionId}/`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!resp.ok) {
+    // Try legacy API
+    const legacyResp = await fetch(`https://www.metaculus.com/api2/questions/${questionId}/`);
+    if (legacyResp.ok) {
+      const data = await legacyResp.json();
+      const prob =
+        data?.community_prediction?.full?.q2 ??
+        data?.prediction_timeseries?.[data.prediction_timeseries.length - 1]
+          ?.community_prediction;
+      return {
+        probability: prob ?? null,
+        title: data.title || data.title_short || `Question ${questionId}`,
+        platform: "Metaculus",
+      };
     }
+    return null;
   }
 
-  return { probability: null, title };
+  const data = await resp.json();
+  // New API structure
+  const question = data?.question;
+  const forecast = question?.aggregations?.recency_weighted?.latest;
+  const prob = forecast?.centers?.[0] ?? forecast?.means?.[0] ?? null;
+
+  return {
+    probability: prob,
+    title: data.title || question?.title || `Question ${questionId}`,
+    platform: "Metaculus",
+  };
+}
+
+async function fetchManifold(slug: string) {
+  const resp = await fetch(`https://api.manifold.markets/v0/slug/${slug}`);
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return {
+    probability: data.probability ?? null,
+    title: data.question || data.title || slug,
+    platform: "Manifold",
+  };
 }
 
 serve(async (req) => {
@@ -99,65 +125,42 @@ serve(async (req) => {
     if (!url) throw new Error("URL is required");
 
     const platform = detectPlatform(url);
+    const slug = extractSlug(url, platform);
 
-    // For Manifold, try the API first
-    if (platform === "Manifold") {
-      const slugMatch = url.match(/manifold\.markets\/([^/]+)\/([^/?#]+)/);
-      if (slugMatch) {
-        try {
-          const apiResp = await fetch(`https://api.manifold.markets/v0/slug/${slugMatch[2]}`);
-          if (apiResp.ok) {
-            const data = await apiResp.json();
-            return new Response(
-              JSON.stringify({
-                probability: data.probability,
-                title: data.question || data.title || slugMatch[2],
-                platform,
-              }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-        } catch { /* fall through to HTML scraping */ }
-      }
+    if (!slug) {
+      return new Response(
+        JSON.stringify({ error: `Could not extract identifier from URL. Supported: Polymarket, Metaculus, Manifold.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Fetch the page HTML
-    const resp = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; LeverageSim/1.0)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-    });
-
-    if (!resp.ok) throw new Error(`Failed to fetch URL: ${resp.status}`);
-    const html = await resp.text();
-
-    let result: { probability: number | null; title: string };
-
+    let result;
     switch (platform) {
       case "Polymarket":
-        result = extractPolymarketProbability(html);
+        result = await fetchPolymarket(slug);
         break;
       case "Metaculus":
-        result = extractMetaculusProbability(html);
+        result = await fetchMetaculus(slug);
         break;
       case "Manifold":
-        result = extractManifoldProbability(html);
+        result = await fetchManifold(slug);
         break;
       default:
-        // Generic extraction
-        result = { probability: null, title: "" };
-        const titleM = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-        if (titleM) result.title = titleM[1].trim();
-        // Look for any probability-like pattern
-        const genericMatch = html.match(/"probability"\s*:\s*(0?\.\d+)/);
-        if (genericMatch) result.probability = parseFloat(genericMatch[1]);
+        result = null;
     }
 
-    return new Response(
-      JSON.stringify({ ...result, platform }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    if (!result || result.probability == null) {
+      return new Response(
+        JSON.stringify({ error: `Could not extract probability from ${platform} API`, platform }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`${platform} API: "${result.title}" → ${(result.probability * 100).toFixed(1)}%`);
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
     console.error("firecrawl-scrape error:", e);
     return new Response(
