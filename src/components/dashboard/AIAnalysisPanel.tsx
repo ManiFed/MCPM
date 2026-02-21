@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import type { SimulationParams, SimulationResult } from "@/types/simulation";
 import { toast } from "sonner";
+import { apiUrl } from "@/lib/api";
 
 interface AIAnalysisPanelProps {
   params: SimulationParams;
@@ -21,12 +22,10 @@ export function AIAnalysisPanel({ params, result }: AIAnalysisPanelProps) {
     setBearCase("");
 
     try {
-      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-analysis`;
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetch(apiUrl("/api/ai-analysis"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
           params: {

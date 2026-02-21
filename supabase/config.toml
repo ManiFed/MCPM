@@ -1,7 +1,0 @@
-project_id = "seebckcpdergeiejxnvf"
-
-[functions.firecrawl-scrape]
-verify_jwt = false
-
-[functions.ai-analysis]
-verify_jwt = false

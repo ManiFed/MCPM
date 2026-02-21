@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link2, Play, Loader2 } from "lucide-react";
 import type { SimulationParams, MarketInfo } from "@/types/simulation";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { apiUrl } from "@/lib/api";
 
 interface InputPanelProps {
   onRunSimulation: (params: SimulationParams) => void;
@@ -29,10 +29,13 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
     if (!marketUrl.trim()) return;
     setIsScraping(true);
     try {
-      const { data, error } = await supabase.functions.invoke("firecrawl-scrape", {
-        body: { url: marketUrl.trim() },
+      const response = await fetch(apiUrl("/api/firecrawl-scrape"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: marketUrl.trim() }),
       });
-      if (error) throw error;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to scrape URL");
       if (data?.probability != null) {
         setProbability(Math.round(data.probability * 100));
         setMarketInfo({

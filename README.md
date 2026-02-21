@@ -2,6 +2,8 @@
 
 A React + TypeScript app for prediction market simulation and analysis.
 
+This version removes direct Supabase usage. The frontend now calls generic `/api` endpoints so you can run your own PostgreSQL-backed backend (for example on Railway) instead of Supabase Edge Functions.
+
 ## Local development
 
 Requirements:
@@ -23,22 +25,23 @@ npm run dev
 - `npm start` - Start the production preview server (binds to `0.0.0.0:$PORT` for Railway)
 - `npm run test` - Run test suite
 
+## Backend/API configuration
+
+The frontend calls:
+- `POST /api/firecrawl-scrape`
+- `POST /api/ai-analysis`
+
+By default it uses same-origin requests. To target a separate backend service, set:
+
+- `VITE_API_BASE_URL` (example: `https://your-backend.up.railway.app`)
+
+Your backend can use PostgreSQL via `DATABASE_URL` and any other secrets it needs (`AI_GATEWAY_API_KEY`, etc.).
+
 ## Deploying on Railway
 
-This project is ready for Railway deployment as a Node service.
-
-1. Create a new Railway project and connect this repository.
-2. Railway will build the included multi-stage `Dockerfile`.
-3. The container starts with `npm run start`, which serves the Vite build on `0.0.0.0:$PORT`.
-
-### Required environment variables
-
-Set these in Railway if you use Supabase and AI analysis:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `AI_GATEWAY_API_KEY`
-- `AI_GATEWAY_URL` (optional, defaults to OpenRouter's chat completions endpoint)
+1. Deploy this frontend service.
+2. Deploy a backend service that implements the `/api/*` routes and connects to PostgreSQL.
+3. Set `VITE_API_BASE_URL` in this frontend service to your backend URL.
 
 ## Tech stack
 
