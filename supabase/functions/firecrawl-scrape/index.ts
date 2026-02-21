@@ -10,25 +10,28 @@ function detectPlatform(url: string): string {
   if (url.includes("polymarket.com")) return "Polymarket";
   if (url.includes("metaculus.com")) return "Metaculus";
   if (url.includes("manifold.markets")) return "Manifold";
+  if (url.includes("kalshi.com")) return "Kalshi";
   return "Unknown";
 }
 
 function extractSlug(url: string, platform: string): string | null {
   switch (platform) {
     case "Polymarket": {
-      // https://polymarket.com/event/some-slug or /event/some-slug/some-market
       const match = url.match(/polymarket\.com\/event\/([^/?#]+)(?:\/([^/?#]+))?/);
       return match ? (match[2] || match[1]) : null;
     }
     case "Metaculus": {
-      // https://www.metaculus.com/questions/12345/slug-here/
       const match = url.match(/metaculus\.com\/questions\/(\d+)/);
       return match ? match[1] : null;
     }
     case "Manifold": {
-      // https://manifold.markets/username/slug-here
       const match = url.match(/manifold\.markets\/([^/]+)\/([^/?#]+)/);
       return match ? match[2] : null;
+    }
+    case "Kalshi": {
+      // https://kalshi.com/markets/kx-event/market-ticker or /markets/market-ticker
+      const match = url.match(/kalshi\.com\/markets\/(?:[^/]+\/)?([^/?#]+)/);
+      return match ? match[1] : null;
     }
     default:
       return null;
@@ -117,6 +120,41 @@ async function fetchManifold(slug: string) {
   };
 }
 
+async function fetchKalshi(ticker: string) {
+  // Try the ticker directly (uppercase)
+  const upperTicker = ticker.toUpperCase().replace(/-/g, "");
+  const urls = [
+    `https://api.elections.kalshi.com/trade-api/v2/markets/${upperTicker}`,
+    `https://api.elections.kalshi.com/trade-api/v2/markets/${ticker}`,
+    `https://trading-api.kalshi.com/trade-api/v2/markets/${upperTicker}`,
+    `https://trading-api.kalshi.com/trade-api/v2/markets/${ticker}`,
+  ];
+
+  for (const apiUrl of urls) {
+    try {
+      const resp = await fetch(apiUrl, {
+        headers: { Accept: "application/json" },
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const market = data.market;
+      if (market) {
+        // yes_price is in cents (0-100) on Kalshi
+        const yesPrice = market.yes_price ?? market.last_price ?? null;
+        const prob = yesPrice != null ? yesPrice / 100 : null;
+        return {
+          probability: prob,
+          title: market.title || market.subtitle || ticker,
+          platform: "Kalshi",
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -129,7 +167,7 @@ serve(async (req) => {
 
     if (!slug) {
       return new Response(
-        JSON.stringify({ error: `Could not extract identifier from URL. Supported: Polymarket, Metaculus, Manifold.` }),
+        JSON.stringify({ error: `Could not extract identifier from URL. Supported: Polymarket, Metaculus, Manifold, Kalshi.` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -144,6 +182,9 @@ serve(async (req) => {
         break;
       case "Manifold":
         result = await fetchManifold(slug);
+        break;
+      case "Kalshi":
+        result = await fetchKalshi(slug);
         break;
       default:
         result = null;

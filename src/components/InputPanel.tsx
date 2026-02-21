@@ -85,7 +85,7 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="Paste Polymarket / Metaculus / Manifold URL..."
+              placeholder="Paste Polymarket / Metaculus / Manifold / Kalshi URL..."
               value={marketUrl}
               onChange={(e) => setMarketUrl(e.target.value)}
               className="font-mono text-xs bg-background/50"
