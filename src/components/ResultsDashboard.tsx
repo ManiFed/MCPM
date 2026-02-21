@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { motion } from "framer-motion";
 import type { SimulationParams, SimulationResult } from "@/types/simulation";
 import { SummaryStats } from "./dashboard/SummaryStats";
@@ -18,29 +17,6 @@ interface ResultsDashboardProps {
 }
 
 export function ResultsDashboard({ result, isRunning, progress, params }: ResultsDashboardProps) {
-  // Dummy scatter data computed from result + different leverage levels
-  const scatterData = useMemo(() => {
-    if (!result || !params) return [];
-    // We only have data for current leverage, so show as single highlighted point
-    // In a full implementation you'd run mini-sims at each leverage
-    return [1, 2, 3, 5, 7, 10].map((lev) => {
-      if (lev === params.leverage) {
-        return {
-          leverage: lev,
-          expectedReturn: result.meanReturn,
-          ruinProbability: result.probabilityOfRuin,
-        };
-      }
-      // Rough extrapolation for visual purposes
-      const ratio = lev / params.leverage;
-      return {
-        leverage: lev,
-        expectedReturn: result.meanReturn * ratio * 0.8,
-        ruinProbability: Math.min(1, result.probabilityOfRuin * ratio * 1.2),
-      };
-    });
-  }, [result, params]);
-
   if (isRunning) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-6">
@@ -93,7 +69,7 @@ export function ResultsDashboard({ result, isRunning, progress, params }: Result
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ConfidenceTable result={result} bankroll={params.bankroll} />
-        <RiskRewardScatter data={scatterData} currentLeverage={params.leverage} />
+        <RiskRewardScatter data={result.leverageSweep} currentLeverage={params.leverage} />
       </div>
 
       <AIAnalysisPanel params={params} result={result} />
