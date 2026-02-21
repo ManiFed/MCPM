@@ -24,10 +24,10 @@ const Index = () => {
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center gap-3">
           <Activity className="h-5 w-5 text-primary" />
           <h1 className="font-mono text-sm font-bold tracking-wider text-foreground">
-            LEVERAGE SIM
+            MCPM
           </h1>
           <span className="font-mono text-[10px] text-muted-foreground ml-1">
-            Monte Carlo Prediction Market Simulator
+            Monte Carlo · Prediction Markets
           </span>
           <div className="ml-auto">
             <a

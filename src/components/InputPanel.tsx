@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link2, Play, Loader2 } from "lucide-react";
-import type { SimulationParams, RiskTolerance, MarketInfo } from "@/types/simulation";
+import type { SimulationParams, MarketInfo } from "@/types/simulation";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,13 +14,11 @@ interface InputPanelProps {
   isRunning: boolean;
 }
 
-const LEVERAGE_PRESETS = [2, 3, 5, 10];
-
 export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
   const [marketUrl, setMarketUrl] = useState("");
   const [probability, setProbability] = useState(50);
   const [leverage, setLeverage] = useState(2);
-  const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
+  const [positionSize, setPositionSize] = useState(15); // percentage 1-50
   const [numSimulations, setNumSimulations] = useState(10000);
   const [bankroll, setBankroll] = useState(10000);
   const [numBets, setNumBets] = useState(100);
@@ -58,7 +56,7 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
     onRunSimulation({
       probability: probability / 100,
       leverage,
-      riskTolerance,
+      positionSize: positionSize / 100,
       numSimulations,
       bankroll,
       numBets,
@@ -68,55 +66,45 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
     });
   };
 
-  const riskToleranceFromSlider = (val: number): RiskTolerance => {
-    if (val <= 33) return "conservative";
-    if (val <= 66) return "moderate";
-    return "aggressive";
-  };
-
-  const riskSliderValue = riskTolerance === "conservative" ? 15 : riskTolerance === "moderate" ? 50 : 85;
-
-  const riskLabel = riskTolerance === "conservative" ? "Conservative (5%)" : riskTolerance === "moderate" ? "Moderate (15%)" : "Aggressive (30%)";
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Market Input */}
       <Card className="border-border/50 bg-card/80 backdrop-blur">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
-            Market Input
+        <CardHeader className="pb-2 pt-3 px-4">
+          <CardTitle className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Market
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 px-4 pb-4">
           <div className="flex gap-2">
             <Input
-              placeholder="Paste Polymarket / Metaculus / Manifold / Kalshi URL..."
+              placeholder="Paste prediction market URL..."
               value={marketUrl}
               onChange={(e) => setMarketUrl(e.target.value)}
-              className="font-mono text-xs bg-background/50"
+              className="font-mono text-xs bg-background/50 h-8"
             />
             <Button
               size="sm"
               variant="outline"
               onClick={handleScrapeUrl}
               disabled={isScraping || !marketUrl.trim()}
-              className="shrink-0"
+              className="shrink-0 h-8 w-8 p-0"
             >
-              {isScraping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              {isScraping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
             </Button>
           </div>
 
           {marketInfo && (
-            <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
-              <p className="text-xs font-mono text-primary">{marketInfo.platform}</p>
-              <p className="text-sm mt-1 text-card-foreground">{marketInfo.title}</p>
+            <div className="rounded border border-primary/20 bg-primary/5 p-2.5">
+              <p className="text-[10px] font-mono text-primary">{marketInfo.platform}</p>
+              <p className="text-xs mt-0.5 text-card-foreground">{marketInfo.title}</p>
             </div>
           )}
 
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs font-mono text-muted-foreground">PROBABILITY</Label>
-              <span className="font-mono text-lg font-bold text-primary">{probability}%</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-[10px] font-mono text-muted-foreground">PROBABILITY</Label>
+              <span className="font-mono text-sm font-bold text-primary">{probability}%</span>
             </div>
             <Slider
               value={[probability]}
@@ -129,19 +117,19 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
         </CardContent>
       </Card>
 
-      {/* Simulation Parameters */}
+      {/* Parameters */}
       <Card className="border-border/50 bg-card/80 backdrop-blur">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
+        <CardHeader className="pb-2 pt-3 px-4">
+          <CardTitle className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
             Parameters
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 pb-4">
           {/* Leverage */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs font-mono text-muted-foreground">LEVERAGE</Label>
-              <span className="font-mono text-lg font-bold text-accent">{leverage}x</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-[10px] font-mono text-muted-foreground">LEVERAGE</Label>
+              <span className="font-mono text-sm font-bold text-accent">{leverage}x</span>
             </div>
             <Slider
               value={[leverage]}
@@ -150,41 +138,30 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
               max={10}
               step={0.5}
             />
-            <div className="flex gap-1.5 mt-2">
-              {LEVERAGE_PRESETS.map((l) => (
-                <Button
-                  key={l}
-                  size="sm"
-                  variant={leverage === l ? "default" : "outline"}
-                  className="flex-1 h-7 text-xs font-mono"
-                  onClick={() => setLeverage(l)}
-                >
-                  {l}x
-                </Button>
-              ))}
-            </div>
           </div>
 
-          {/* Risk Tolerance */}
+          {/* Position Size (replaces risk tolerance) */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs font-mono text-muted-foreground">RISK TOLERANCE</Label>
-              <span className="font-mono text-sm font-bold text-accent">{riskLabel}</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-[10px] font-mono text-muted-foreground">POSITION SIZE</Label>
+              <span className="font-mono text-sm font-bold text-accent">{positionSize}%</span>
             </div>
             <Slider
-              value={[riskSliderValue]}
-              onValueChange={([v]) => setRiskTolerance(riskToleranceFromSlider(v))}
-              min={0}
-              max={100}
+              value={[positionSize]}
+              onValueChange={([v]) => setPositionSize(v)}
+              min={1}
+              max={50}
               step={1}
             />
           </div>
 
           {/* Simulations */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs font-mono text-muted-foreground">SIMULATIONS</Label>
-              <span className="font-mono text-lg font-bold text-accent">{numSimulations >= 1000 ? `${numSimulations / 1000}K` : numSimulations}</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-[10px] font-mono text-muted-foreground">SIMULATIONS</Label>
+              <span className="font-mono text-sm font-bold text-accent">
+                {numSimulations >= 1000 ? `${numSimulations / 1000}K` : numSimulations}
+              </span>
             </div>
             <Slider
               value={[numSimulations]}
@@ -198,22 +175,22 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
           {/* Bankroll & Bets */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs font-mono text-muted-foreground">BANKROLL ($)</Label>
+              <Label className="text-[10px] font-mono text-muted-foreground">BANKROLL ($)</Label>
               <Input
                 type="number"
                 value={bankroll}
                 onChange={(e) => setBankroll(Number(e.target.value))}
-                className="mt-1.5 font-mono text-sm bg-background/50"
+                className="mt-1 font-mono text-xs bg-background/50 h-8"
                 min={100}
               />
             </div>
             <div>
-              <Label className="text-xs font-mono text-muted-foreground">BETS / RUN</Label>
+              <Label className="text-[10px] font-mono text-muted-foreground">BETS / RUN</Label>
               <Input
                 type="number"
                 value={numBets}
                 onChange={(e) => setNumBets(Number(e.target.value))}
-                className="mt-1.5 font-mono text-sm bg-background/50"
+                className="mt-1 font-mono text-xs bg-background/50 h-8"
                 min={10}
                 max={1000}
               />
@@ -226,17 +203,17 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
       <Button
         onClick={handleRun}
         disabled={isRunning}
-        className="w-full h-12 font-mono text-sm uppercase tracking-widest glow-green"
+        className="w-full h-10 font-mono text-xs uppercase tracking-widest glow-green"
         size="lg"
       >
         {isRunning ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Simulating...
           </>
         ) : (
           <>
-            <Play className="h-4 w-4" />
+            <Play className="h-3.5 w-3.5" />
             Run Simulation
           </>
         )}
