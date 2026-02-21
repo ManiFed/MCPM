@@ -3,7 +3,8 @@ import { InputPanel } from "@/components/InputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { useSimulation } from "@/hooks/useSimulation";
 import type { SimulationParams } from "@/types/simulation";
-import { Activity, Heart } from "lucide-react";
+import { AppHeader } from "@/components/AppHeader";
+import { Card } from "@/components/ui/card";
 
 const Index = () => {
   const { result, isRunning, progress, runSimulation } = useSimulation();
@@ -18,48 +19,30 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background terminal-grid scanline">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center gap-3">
-          <Activity className="h-5 w-5 text-primary" />
-          <h1 className="font-mono text-sm font-bold tracking-wider text-foreground">
-            MCPM
-          </h1>
-          <span className="font-mono text-[10px] text-muted-foreground ml-1">
-            Monte Carlo · Prediction Markets
-          </span>
-          <div className="ml-auto">
-            <a
-              href="https://donate.stripe.com/placeholder"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border/50 bg-background/50 hover:bg-accent hover:text-accent-foreground transition-colors font-mono text-[10px] text-muted-foreground hover:text-foreground"
-            >
-              <Heart className="h-3 w-3 text-loss" />
-              Sponsor
-            </a>
-          </div>
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+
+      <div className="max-w-[1400px] mx-auto p-4 md:p-6">
+        <div className="mb-4">
+          <h2 className="font-mono text-sm text-foreground">Simulation Workspace</h2>
+          <p className="text-xs text-muted-foreground">
+            Configure assumptions, run Monte Carlo, and inspect risk/return distributions.
+          </p>
         </div>
-      </header>
 
-      {/* Main Layout */}
-      <div className="max-w-[1600px] mx-auto p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Input Panel */}
-          <aside className="w-full lg:w-80 xl:w-96 shrink-0">
+        <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-4 md:gap-5 items-start">
+          <Card className="p-3 md:p-4 bg-card/70 border-border/60">
             <InputPanel onRunSimulation={handleRun} isRunning={isRunning} />
-          </aside>
+          </Card>
 
-          {/* Results Dashboard */}
-          <main className="flex-1 min-w-0">
+          <Card className="p-3 md:p-4 bg-card/70 border-border/60 min-h-[500px]">
             <ResultsDashboard
               result={result}
               isRunning={isRunning}
               progress={progress}
               params={lastParams}
             />
-          </main>
+          </Card>
         </div>
       </div>
     </div>

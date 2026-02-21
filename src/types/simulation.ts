@@ -10,6 +10,12 @@ export interface SimulationParams {
   marketPlatform?: string;
 }
 
+export interface LeveragePoint {
+  leverage: number;
+  expectedReturn: number;
+  ruinProbability: number;
+}
+
 export interface SimulationResult {
   finalValues: number[];
   equityCurves: number[][]; // subset of curves for visualization
@@ -20,6 +26,7 @@ export interface SimulationResult {
   maxDrawdown: number;
   sharpeRatio: number;
   meanReturn: number;
+  leverageSweep: LeveragePoint[];
 }
 
 export interface MarketInfo {
