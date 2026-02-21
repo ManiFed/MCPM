@@ -64,6 +64,8 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
       bankroll,
       numBets,
       marketTitle: marketInfo?.title,
+      marketUrl: marketInfo?.url,
+      marketPlatform: marketInfo?.platform,
     });
   };
 

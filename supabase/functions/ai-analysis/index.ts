@@ -14,27 +14,31 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `You are a quantitative finance analyst specializing in prediction markets and leveraged trading. 
-You will receive simulation parameters and Monte Carlo results for a leveraged prediction market position.
+    const systemPrompt = `You are a quantitative finance analyst and prediction market expert specializing in leveraged trading.
+You will receive simulation parameters, Monte Carlo results, and information about a specific prediction market.
 
-Your task: Write a concise bull case and bear case for taking this position.
+Your task: Write a concise bull case and bear case for taking this position. IMPORTANTLY, you should discuss the ACTUAL MARKET itself — what the question is about, why the current probability may be mispriced, what real-world factors could move it, and whether the bet makes fundamental sense — not just comment on the simulation numbers.
 
 FORMAT YOUR RESPONSE EXACTLY AS:
 ---BULL---
-[Your bull case argument here - 3-5 paragraphs]
+[Your bull case argument here - 3-5 paragraphs. Start by discussing the market question itself and why YES might be underpriced, then tie in the simulation data.]
 ---BEAR---
-[Your bear case argument here - 3-5 paragraphs]
+[Your bear case argument here - 3-5 paragraphs. Start by discussing real-world risks to the position and why the current price might be fair or overpriced, then tie in the simulation data.]
 
-Be specific, reference the actual numbers provided, and consider:
-- Expected value vs median outcome (skew)
-- Probability of ruin
-- Max drawdown severity
-- Risk-adjusted returns (Sharpe)
-- Position sizing implications
-- Real-world factors that Monte Carlo may not capture`;
+Consider:
+- The actual market question and what would need to happen for YES/NO to resolve
+- Whether the current probability seems well-calibrated or mispriced, and why
+- Real-world events, timelines, and catalysts that could move the market
+- Expected value vs median outcome (skew) from the simulation
+- Probability of ruin and max drawdown severity
+- Risk-adjusted returns (Sharpe) and position sizing implications
+- Liquidity, market manipulation, and platform-specific risks that Monte Carlo cannot capture`;
 
-    const userMessage = `Simulation Parameters:
-- Market: ${params.marketTitle || "Custom probability input"}
+    const marketSection = params.marketTitle
+      ? `Market: "${params.marketTitle}"${params.marketPlatform ? ` (${params.marketPlatform})` : ""}${params.marketUrl ? `\nURL: ${params.marketUrl}` : ""}`
+      : "Market: Custom probability input (no specific market — focus on the simulation numbers)";
+
+    const userMessage = `${marketSection}
 - Base Probability: ${(params.probability * 100).toFixed(1)}%
 - Leverage: ${params.leverage}x
 - Risk Tolerance: ${params.riskTolerance}
