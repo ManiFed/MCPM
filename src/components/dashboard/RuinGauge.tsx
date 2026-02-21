@@ -8,7 +8,9 @@ interface RuinGaugeProps {
 export function RuinGauge({ probability }: RuinGaugeProps) {
   const pct = probability * 100;
   const circumference = 2 * Math.PI * 60;
-  const strokeDashoffset = circumference - (probability * 0.75 * circumference);
+  const arcLength = circumference * 0.75;
+  const filledLength = probability * arcLength;
+  const strokeDashoffset = arcLength - filledLength;
   const color = pct > 50 ? "hsl(0, 85%, 55%)" : pct > 20 ? "hsl(45, 100%, 55%)" : "hsl(142, 72%, 50%)";
 
   return (
