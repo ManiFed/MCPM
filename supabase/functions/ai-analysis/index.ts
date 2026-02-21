@@ -11,8 +11,10 @@ serve(async (req) => {
 
   try {
     const { params, stats } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const AI_GATEWAY_API_KEY = Deno.env.get("AI_GATEWAY_API_KEY");
+    if (!AI_GATEWAY_API_KEY) throw new Error("AI_GATEWAY_API_KEY is not configured");
+    const AI_GATEWAY_URL =
+      Deno.env.get("AI_GATEWAY_URL") ?? "https://openrouter.ai/api/v1/chat/completions";
 
     const systemPrompt = `You are a quantitative finance analyst and prediction market expert specializing in leveraged trading.
 You will receive simulation parameters, Monte Carlo results, and information about a specific prediction market.
@@ -52,10 +54,10 @@ Monte Carlo Results:
 - Sharpe Ratio: ${stats.sharpeRatio.toFixed(2)}
 - Percentiles: ${JSON.stringify(stats.percentiles)}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_GATEWAY_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
