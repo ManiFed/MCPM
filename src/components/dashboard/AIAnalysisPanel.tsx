@@ -35,6 +35,8 @@ export function AIAnalysisPanel({ params, result }: AIAnalysisPanelProps) {
             riskTolerance: params.riskTolerance,
             bankroll: params.bankroll,
             marketTitle: params.marketTitle,
+            marketUrl: params.marketUrl,
+            marketPlatform: params.marketPlatform,
           },
           stats: {
             expectedValue: result.expectedValue,

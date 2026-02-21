@@ -8,6 +8,8 @@ export interface SimulationParams {
   bankroll: number;
   numBets: number; // number of sequential bets per simulation
   marketTitle?: string;
+  marketUrl?: string;
+  marketPlatform?: string;
 }
 
 export interface SimulationResult {

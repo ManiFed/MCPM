@@ -3,7 +3,7 @@ import { InputPanel } from "@/components/InputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { useSimulation } from "@/hooks/useSimulation";
 import type { SimulationParams } from "@/types/simulation";
-import { Activity } from "lucide-react";
+import { Activity, Heart } from "lucide-react";
 
 const Index = () => {
   const { result, isRunning, progress, runSimulation } = useSimulation();
@@ -29,6 +29,17 @@ const Index = () => {
           <span className="font-mono text-[10px] text-muted-foreground ml-1">
             Monte Carlo Prediction Market Simulator
           </span>
+          <div className="ml-auto">
+            <a
+              href="https://buymeacoffee.com/leveragesim"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border/50 bg-background/50 hover:bg-accent hover:text-accent-foreground transition-colors font-mono text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              <Heart className="h-3 w-3 text-loss" />
+              Sponsor
+            </a>
+          </div>
         </div>
       </header>
 
