@@ -28,8 +28,8 @@ npm run dev
 This project is ready for Railway deployment as a Node service.
 
 1. Create a new Railway project and connect this repository.
-2. Railway will install dependencies and run the build command from `railway.toml`.
-3. Railway will start the app with `npm start`, which listens on `0.0.0.0:$PORT`.
+2. Railway will build the included multi-stage `Dockerfile`.
+3. The container starts with `npm run start`, which serves the Vite build on `0.0.0.0:$PORT`.
 
 ### Required environment variables
 
