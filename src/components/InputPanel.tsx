@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link2, Zap, Shield, Flame, Play, Loader2 } from "lucide-react";
+import { Link2, Play, Loader2 } from "lucide-react";
 import type { SimulationParams, RiskTolerance, MarketInfo } from "@/types/simulation";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +15,6 @@ interface InputPanelProps {
 }
 
 const LEVERAGE_PRESETS = [2, 3, 5, 10];
-const SIM_PRESETS = [1000, 10000, 50000];
 
 export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
   const [marketUrl, setMarketUrl] = useState("");
@@ -69,11 +68,15 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
     });
   };
 
-  const riskOptions: { key: RiskTolerance; label: string; icon: React.ReactNode; desc: string }[] = [
-    { key: "conservative", label: "Conservative", icon: <Shield className="h-3.5 w-3.5" />, desc: "5% per bet" },
-    { key: "moderate", label: "Moderate", icon: <Zap className="h-3.5 w-3.5" />, desc: "15% per bet" },
-    { key: "aggressive", label: "Aggressive", icon: <Flame className="h-3.5 w-3.5" />, desc: "30% per bet" },
-  ];
+  const riskToleranceFromSlider = (val: number): RiskTolerance => {
+    if (val <= 33) return "conservative";
+    if (val <= 66) return "moderate";
+    return "aggressive";
+  };
+
+  const riskSliderValue = riskTolerance === "conservative" ? 15 : riskTolerance === "moderate" ? 50 : 85;
+
+  const riskLabel = riskTolerance === "conservative" ? "Conservative (5%)" : riskTolerance === "moderate" ? "Moderate (15%)" : "Aggressive (30%)";
 
   return (
     <div className="space-y-4">
@@ -164,42 +167,32 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
 
           {/* Risk Tolerance */}
           <div>
-            <Label className="text-xs font-mono text-muted-foreground">RISK TOLERANCE</Label>
-            <div className="grid grid-cols-3 gap-1.5 mt-2">
-              {riskOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={() => setRiskTolerance(opt.key)}
-                  className={`flex flex-col items-center gap-1 rounded-md border p-2 text-xs transition-colors ${
-                    riskTolerance === opt.key
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-background/50 text-muted-foreground hover:border-muted-foreground/50"
-                  }`}
-                >
-                  {opt.icon}
-                  <span className="font-mono font-medium">{opt.label}</span>
-                  <span className="text-[10px] opacity-70">{opt.desc}</span>
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs font-mono text-muted-foreground">RISK TOLERANCE</Label>
+              <span className="font-mono text-sm font-bold text-accent">{riskLabel}</span>
             </div>
+            <Slider
+              value={[riskSliderValue]}
+              onValueChange={([v]) => setRiskTolerance(riskToleranceFromSlider(v))}
+              min={0}
+              max={100}
+              step={1}
+            />
           </div>
 
           {/* Simulations */}
           <div>
-            <Label className="text-xs font-mono text-muted-foreground">SIMULATIONS</Label>
-            <div className="flex gap-1.5 mt-2">
-              {SIM_PRESETS.map((n) => (
-                <Button
-                  key={n}
-                  size="sm"
-                  variant={numSimulations === n ? "default" : "outline"}
-                  className="flex-1 h-8 text-xs font-mono"
-                  onClick={() => setNumSimulations(n)}
-                >
-                  {n >= 1000 ? `${n / 1000}K` : n}
-                </Button>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs font-mono text-muted-foreground">SIMULATIONS</Label>
+              <span className="font-mono text-lg font-bold text-accent">{numSimulations >= 1000 ? `${numSimulations / 1000}K` : numSimulations}</span>
             </div>
+            <Slider
+              value={[numSimulations]}
+              onValueChange={([v]) => setNumSimulations(v)}
+              min={1000}
+              max={50000}
+              step={1000}
+            />
           </div>
 
           {/* Bankroll & Bets */}

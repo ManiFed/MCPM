@@ -31,7 +31,7 @@ const Index = () => {
           </span>
           <div className="ml-auto">
             <a
-              href="https://buymeacoffee.com/leveragesim"
+              href="https://donate.stripe.com/placeholder"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border/50 bg-background/50 hover:bg-accent hover:text-accent-foreground transition-colors font-mono text-[10px] text-muted-foreground hover:text-foreground"
