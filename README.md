@@ -2,7 +2,7 @@
 
 A React + TypeScript app for prediction market simulation and analysis.
 
-This version removes direct Supabase usage. The frontend now calls generic `/api` endpoints so you can run your own PostgreSQL-backed backend (for example on Railway) instead of Supabase Edge Functions.
+This version removes direct Supabase usage. The frontend now calls local `/api` endpoints served by this same app (no Supabase required), while still supporting an external backend via `VITE_API_BASE_URL` if you prefer.
 
 ## Local development
 
@@ -31,17 +31,20 @@ The frontend calls:
 - `POST /api/firecrawl-scrape`
 - `POST /api/ai-analysis`
 
-By default it uses same-origin requests. To target a separate backend service, set:
+By default it uses same-origin requests and the included Node server handles these routes.
 
-- `VITE_API_BASE_URL` (example: `https://your-backend.up.railway.app`)
+Required server env vars for full functionality:
+- `AI_GATEWAY_API_KEY` (required for `POST /api/ai-analysis`)
+- `AI_GATEWAY_URL` (optional, defaults to OpenRouter Chat Completions endpoint)
 
-Your backend can use PostgreSQL via `DATABASE_URL` and any other secrets it needs (`AI_GATEWAY_API_KEY`, etc.).
+Optional frontend override:
+- `VITE_API_BASE_URL` (if you want the frontend to call a separate backend service instead of same-origin).
 
 ## Deploying on Railway
 
-1. Deploy this frontend service.
-2. Deploy a backend service that implements the `/api/*` routes and connects to PostgreSQL.
-3. Set `VITE_API_BASE_URL` in this frontend service to your backend URL.
+1. Deploy this service (it now includes both frontend + `/api` routes in one process).
+2. Set `AI_GATEWAY_API_KEY` (and optionally `AI_GATEWAY_URL`) on Railway.
+3. If you later split backend/frontend, set `VITE_API_BASE_URL` in the frontend service.
 
 ## Tech stack
 
