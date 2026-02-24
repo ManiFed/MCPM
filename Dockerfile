@@ -15,5 +15,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.mjs ./server.mjs
+COPY --from=build /app/server ./server
 EXPOSE 4173
 CMD ["npm", "run", "start"]
