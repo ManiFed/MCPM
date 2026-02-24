@@ -12,13 +12,25 @@ export default defineConfig(() => ({
     },
     allowedHosts: ["mcpm-production.up.railway.app"],
   },
+
+  preview: {
+    allowedHosts: ["mcpm-production.up.railway.app"],
+  },
+
   plugins: [react()],
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "@tanstack/react-query"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "@tanstack/react-query",
+    ],
   },
+
   optimizeDeps: {
     include: ["@tanstack/react-query"],
   },
