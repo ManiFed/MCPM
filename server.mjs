@@ -30,7 +30,7 @@ async function createHandler() {
   let vite;
   if (!isProd) {
     const { createServer: createViteServer } = await import("vite");
-    vite = await createViteServer({ server: { middlewareMode: true }, appType: "custom" });
+    vite = await createViteServer({ server: { middlewareMode: true } });
   }
 
   return async (req, res) => {
