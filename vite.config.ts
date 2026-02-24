@@ -10,6 +10,7 @@ export default defineConfig(() => ({
     hmr: {
       overlay: false,
     },
+    allowedHosts: ["mcpm-production.up.railway.app"],
   },
   plugins: [react()],
   resolve: {
