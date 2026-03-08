@@ -8,8 +8,14 @@ import { ConfidenceTable } from "./dashboard/ConfidenceTable";
 import { RiskRewardScatter } from "./dashboard/RiskRewardScatter";
 import { AIAnalysisPanel } from "./dashboard/AIAnalysisPanel";
 import { ShareModal } from "./dashboard/ShareModal";
+import { RiskMetrics } from "./dashboard/RiskMetrics";
+import { DrawdownChart } from "./dashboard/DrawdownChart";
+import { SensitivityHeatmap } from "./dashboard/SensitivityHeatmap";
+import { EquityReplay } from "./dashboard/EquityReplay";
 import { Progress } from "@/components/ui/progress";
-import { Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Activity, Download } from "lucide-react";
+import { exportResultsToCSV } from "@/lib/csvExport";
 
 interface ResultsDashboardProps {
   result: SimulationResult | null;
@@ -77,10 +83,23 @@ export function ResultsDashboard({ result, isRunning, progress, params }: Result
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
           <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Results</span>
         </div>
-        <ShareModal params={params} result={result} />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2.5 font-mono text-[10px] gap-1.5"
+            onClick={() => exportResultsToCSV(result, params.bankroll)}
+          >
+            <Download className="h-3 w-3" />
+            CSV
+          </Button>
+          <ShareModal params={params} result={result} />
+        </div>
       </div>
 
       <SummaryStats result={result} bankroll={params.bankroll} />
+
+      <RiskMetrics result={result} bankroll={params.bankroll} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <RuinGauge probability={result.probabilityOfRuin} />
@@ -91,10 +110,16 @@ export function ResultsDashboard({ result, isRunning, progress, params }: Result
 
       <EquityFanChart equityCurves={result.equityCurves} />
 
+      <DrawdownChart equityCurves={result.equityCurves} />
+
+      <EquityReplay equityCurves={result.equityCurves} bankroll={params.bankroll} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ConfidenceTable result={result} bankroll={params.bankroll} />
         <RiskRewardScatter data={result.leverageSweep} currentLeverage={params.leverage} />
       </div>
+
+      <SensitivityHeatmap params={params} />
 
       <AIAnalysisPanel params={params} result={result} />
     </motion.div>
