@@ -123,19 +123,39 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
             </div>
           )}
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <Label className="text-[10px] font-mono text-muted-foreground">PROBABILITY</Label>
-              <span className="font-mono text-sm font-bold text-primary">{probability}%</span>
-            </div>
-            <Slider
-              value={[probability]}
-              onValueChange={([v]) => setProbability(v)}
-              min={1}
-              max={99}
-              step={1}
-            />
+          {/* Mode Toggle */}
+          <div className="flex items-center justify-between">
+            <Label className="text-[10px] font-mono text-muted-foreground">MODE</Label>
+            <button
+              type="button"
+              onClick={() => setMultiOutcome(!multiOutcome)}
+              className="flex items-center gap-1.5 font-mono text-[10px] text-primary hover:text-primary/80 transition-colors"
+            >
+              {multiOutcome ? (
+                <><ToggleRight className="h-4 w-4" /> Multi-Outcome</>
+              ) : (
+                <><ToggleLeft className="h-4 w-4 text-muted-foreground" /> Binary</>
+              )}
+            </button>
           </div>
+
+          {multiOutcome ? (
+            <OutcomeEditor outcomes={outcomes} onChange={setOutcomes} />
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-[10px] font-mono text-muted-foreground">PROBABILITY</Label>
+                <span className="font-mono text-sm font-bold text-primary">{probability}%</span>
+              </div>
+              <Slider
+                value={[probability]}
+                onValueChange={([v]) => setProbability(v)}
+                min={1}
+                max={99}
+                step={1}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
