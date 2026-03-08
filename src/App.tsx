@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import Methodology from "./pages/Methodology";
 import Backtest from "./pages/Backtest";
 import Portfolio from "./pages/Portfolio";
+import Markets from "./pages/Markets";
 import { CommandPalette } from "./components/CommandPalette";
 
 const queryClient = new QueryClient();
