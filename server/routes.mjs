@@ -168,15 +168,28 @@ async function fetchPredictIt(marketId) {
 export async function firecrawlScrape(body) {
   const { url } = body ?? {};
   if (!url || typeof url !== "string") return jsonResponse(400, { error: "URL is required" });
-  const platform = detectPlatform(url);
-  const slug = extractSlug(url, platform);
-  if (!slug) return jsonResponse(400, { error: "Could not extract identifier from URL. Supported: Polymarket, Metaculus, Manifold, Kalshi." });
+
+  const trimmed = url.trim().replace(/\/+$/, "");
+  const platform = detectPlatform(trimmed);
+  if (platform === "Unknown") {
+    return jsonResponse(400, { error: "Unsupported platform. Supported: Polymarket, Metaculus, Manifold, Kalshi, PredictIt." });
+  }
+
+  const slug = extractSlug(trimmed, platform);
+  if (!slug) return jsonResponse(400, { error: `Could not parse ${platform} URL. Try pasting the full market page URL.` });
+
+  console.log(`[scrape] ${platform} → slug:`, JSON.stringify(slug));
+
   const result = platform === "Polymarket" ? await fetchPolymarket(slug)
     : platform === "Metaculus" ? await fetchMetaculus(slug)
     : platform === "Manifold" ? await fetchManifold(slug)
     : platform === "Kalshi" ? await fetchKalshi(slug)
+    : platform === "PredictIt" ? await fetchPredictIt(slug)
     : null;
-  if (!result || result.probability == null) return jsonResponse(422, { error: `Could not extract probability from ${platform} API`, platform });
+
+  if (!result || result.probability == null) {
+    return jsonResponse(422, { error: `Could not extract probability from ${platform}. The market may be closed or the API format may have changed.`, platform });
+  }
   return jsonResponse(200, result);
 }
 
