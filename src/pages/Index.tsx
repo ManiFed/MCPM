@@ -21,6 +21,16 @@ const Index = () => {
 
   const sharedParams = searchParams.get("p") ? decodeParamsFromUrl(searchParams.toString()) : null;
 
+  // Support pre-fill from /markets "Simulate" button
+  const marketPreFill = searchParams.get("prob") ? {
+    probability: parseFloat(searchParams.get("prob")!),
+    marketTitle: searchParams.get("title") || undefined,
+    marketPlatform: searchParams.get("platform") || undefined,
+    marketUrl: searchParams.get("url") || undefined,
+  } as Partial<SimulationParams> : null;
+
+  const effectiveInitialParams = sharedParams || marketPreFill;
+
   // Save to history when a simulation completes
   useEffect(() => {
     if (result && lastParams) {
