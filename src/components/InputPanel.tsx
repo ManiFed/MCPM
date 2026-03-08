@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link2, Play, Loader2 } from "lucide-react";
-import type { SimulationParams, MarketInfo } from "@/types/simulation";
+import { Link2, Play, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import type { SimulationParams, MarketInfo, MarketOutcome } from "@/types/simulation";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api";
 import { KellyIndicator } from "@/components/input/KellyIndicator";
+import { OutcomeEditor } from "@/components/input/OutcomeEditor";
 
 interface InputPanelProps {
   onRunSimulation: (params: SimulationParams) => void;
