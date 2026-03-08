@@ -29,8 +29,14 @@ function sendResult(res, result) {
 async function createHandler() {
   let vite;
   if (!isProd) {
-    const { createServer: createViteServer } = await import("vite");
-    vite = await createViteServer({ server: { middlewareMode: true } });
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      vite = await createViteServer({ server: { middlewareMode: true } });
+      console.log("[server] Vite dev server started in middleware mode");
+    } catch (err) {
+      console.error("[server] Failed to start Vite:", err);
+      throw err;
+    }
   }
 
   return async (req, res) => {
@@ -58,14 +64,19 @@ async function createHandler() {
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(index);
     } catch (error) {
-      console.error(error);
+      console.error("[server] Request error:", error);
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }));
     }
   };
 }
 
-const handler = await createHandler();
-createHttpServer(handler).listen(port, "0.0.0.0", () => {
-  console.log(`Server listening on http://0.0.0.0:${port}`);
-});
+try {
+  const handler = await createHandler();
+  createHttpServer(handler).listen(port, "0.0.0.0", () => {
+    console.log(`[server] Listening on http://0.0.0.0:${port}`);
+  });
+} catch (err) {
+  console.error("[server] Fatal startup error:", err);
+  process.exit(1);
+}
