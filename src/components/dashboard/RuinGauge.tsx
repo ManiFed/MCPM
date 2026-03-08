@@ -10,6 +10,7 @@ export function RuinGauge({ probability }: RuinGaugeProps) {
   const circumference = 2 * Math.PI * 60;
   const arcLength = circumference * 0.75;
   const filledLength = probability * arcLength;
+  const dashArray = `${arcLength} ${circumference}`;
   const strokeDashoffset = arcLength - filledLength;
   const color = pct > 50 ? "hsl(0, 85%, 55%)" : pct > 20 ? "hsl(45, 100%, 55%)" : "hsl(142, 72%, 50%)";
 
