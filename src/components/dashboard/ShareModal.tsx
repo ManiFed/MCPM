@@ -56,8 +56,8 @@ export function ShareModal({ params, result }: ShareModalProps) {
   const handleDownloadImage = async () => {
     if (!cardRef.current) return;
     try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(cardRef.current, {
+      const { default: h2c } = await import("html2canvas");
+      const canvas = await h2c(cardRef.current, {
         backgroundColor: "#0a0d11",
         scale: 2,
       });
@@ -67,7 +67,7 @@ export function ShareModal({ params, result }: ShareModalProps) {
       link.click();
       toast.success("Image downloaded");
     } catch {
-      toast.error("Failed to generate image");
+      toast.error("Failed to generate image — try Copy Link instead");
     }
   };
 
