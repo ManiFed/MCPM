@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import type { SimulationParams, SimulationResult } from "@/types/simulation";
 import { SnapshotCard } from "./SnapshotCard";
-import html2canvas from "html2canvas";
+
 
 interface ShareModalProps {
   params: SimulationParams;
@@ -56,6 +56,7 @@ export function ShareModal({ params, result }: ShareModalProps) {
   const handleDownloadImage = async () => {
     if (!cardRef.current) return;
     try {
+      const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: "#0a0d11",
         scale: 2,
