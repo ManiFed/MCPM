@@ -16,6 +16,8 @@ export interface SimulationParams {
   marketPlatform?: string;
   multiOutcome?: boolean;
   outcomes?: MarketOutcome[];
+  profitTarget?: number; // multiplier of bankroll, e.g. 2.0 = 2x
+  stopLoss?: number; // multiplier of bankroll, e.g. 0.5 = 50% remaining
 }
 
 export interface LeveragePoint {
