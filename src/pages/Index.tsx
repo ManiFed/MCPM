@@ -1,14 +1,29 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { InputPanel } from "@/components/InputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { useSimulation } from "@/hooks/useSimulation";
 import type { SimulationParams } from "@/types/simulation";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
+import { decodeParamsFromUrl } from "@/components/dashboard/ShareModal";
 
 const Index = () => {
   const { result, isRunning, progress, runSimulation } = useSimulation();
   const [lastParams, setLastParams] = useState<SimulationParams | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Decode shared URL params on mount
+  const sharedParams = searchParams.get("p") ? decodeParamsFromUrl(searchParams.toString()) : null;
+
+  // Auto-run if shared params detected
+  useEffect(() => {
+    if (sharedParams && !result && !isRunning) {
+      setLastParams(sharedParams);
+      runSimulation(sharedParams);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRun = useCallback(
     (params: SimulationParams) => {
@@ -32,7 +47,7 @@ const Index = () => {
 
         <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-4 md:gap-5 items-start">
           <Card className="p-3 md:p-4 bg-card/70 border-border/60">
-            <InputPanel onRunSimulation={handleRun} isRunning={isRunning} />
+            <InputPanel onRunSimulation={handleRun} isRunning={isRunning} initialParams={sharedParams} />
           </Card>
 
           <Card className="p-3 md:p-4 bg-card/70 border-border/60 min-h-[500px]">

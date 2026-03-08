@@ -8,21 +8,25 @@ import { Link2, Play, Loader2 } from "lucide-react";
 import type { SimulationParams, MarketInfo } from "@/types/simulation";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api";
+import { KellyIndicator } from "@/components/input/KellyIndicator";
 
 interface InputPanelProps {
   onRunSimulation: (params: SimulationParams) => void;
   isRunning: boolean;
+  initialParams?: Partial<SimulationParams> | null;
 }
 
-export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
+export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputPanelProps) {
   const [marketUrl, setMarketUrl] = useState("");
-  const [probability, setProbability] = useState(50);
-  const [leverage, setLeverage] = useState(2);
-  const [positionSize, setPositionSize] = useState(15); // percentage 1-50
-  const [numSimulations, setNumSimulations] = useState(10000);
-  const [bankroll, setBankroll] = useState(10000);
-  const [numBets, setNumBets] = useState(100);
-  const [marketInfo, setMarketInfo] = useState<MarketInfo | null>(null);
+  const [probability, setProbability] = useState(initialParams?.probability ? Math.round(initialParams.probability * 100) : 50);
+  const [leverage, setLeverage] = useState(initialParams?.leverage ?? 2);
+  const [positionSize, setPositionSize] = useState(initialParams?.positionSize ? Math.round(initialParams.positionSize * 100) : 15);
+  const [numSimulations, setNumSimulations] = useState(initialParams?.numSimulations ?? 10000);
+  const [bankroll, setBankroll] = useState(initialParams?.bankroll ?? 10000);
+  const [numBets, setNumBets] = useState(initialParams?.numBets ?? 100);
+  const [marketInfo, setMarketInfo] = useState<MarketInfo | null>(
+    initialParams?.marketTitle ? { title: initialParams.marketTitle, probability: initialParams.probability ?? 0.5, platform: initialParams.marketPlatform ?? "", url: "" } : null
+  );
   const [isScraping, setIsScraping] = useState(false);
 
   const handleScrapeUrl = async () => {
@@ -143,7 +147,7 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
             />
           </div>
 
-          {/* Position Size (replaces risk tolerance) */}
+          {/* Position Size */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-[10px] font-mono text-muted-foreground">POSITION SIZE</Label>
@@ -157,6 +161,13 @@ export function InputPanel({ onRunSimulation, isRunning }: InputPanelProps) {
               step={1}
             />
           </div>
+
+          {/* Kelly Criterion Indicator */}
+          <KellyIndicator
+            probability={probability / 100}
+            leverage={leverage}
+            currentPositionSize={positionSize / 100}
+          />
 
           {/* Simulations */}
           <div>

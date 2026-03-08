@@ -1,4 +1,4 @@
-import { Activity, BookOpen, FlaskConical, Heart } from "lucide-react";
+import { Activity, BookOpen, FlaskConical, Heart, History, Layers } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 export function AppHeader() {
@@ -22,6 +22,22 @@ export function AppHeader() {
           >
             <FlaskConical className="h-3.5 w-3.5" />
             Simulator
+          </NavLink>
+          <NavLink
+            to="/backtest"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-transparent text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-accent/20"
+            activeClassName="bg-primary/15 text-primary border-primary/25"
+          >
+            <History className="h-3.5 w-3.5" />
+            Backtest
+          </NavLink>
+          <NavLink
+            to="/portfolio"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-transparent text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-accent/20"
+            activeClassName="bg-primary/15 text-primary border-primary/25"
+          >
+            <Layers className="h-3.5 w-3.5" />
+            Portfolio
           </NavLink>
           <NavLink
             to="/methodology"
