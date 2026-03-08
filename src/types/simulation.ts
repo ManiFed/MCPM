@@ -26,6 +26,11 @@ export interface LeveragePoint {
   ruinProbability: number;
 }
 
+export interface StreakStats {
+  maxWinStreaks: number[]; // distribution of max win streaks per sim
+  maxLossStreaks: number[]; // distribution of max loss streaks per sim
+}
+
 export interface SimulationResult {
   finalValues: number[];
   equityCurves: number[][]; // subset of curves for visualization
@@ -37,6 +42,9 @@ export interface SimulationResult {
   sharpeRatio: number;
   meanReturn: number;
   leverageSweep: LeveragePoint[];
+  pctHitTarget?: number; // fraction of paths that hit profit target
+  pctHitStop?: number; // fraction of paths that hit stop loss
+  streaks?: StreakStats;
 }
 
 export interface MarketInfo {
