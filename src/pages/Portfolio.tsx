@@ -70,7 +70,7 @@ const Portfolio = () => {
                       <Input type="number" value={numBets} onChange={e => setNumBets(Number(e.target.value))} className="mt-1 font-mono text-xs bg-background/50 h-8" min={10} max={1000} />
                     </div>
                   </div>
-                </CardContent>
+                </div>
               </Card>
 
               <Button onClick={handleRun} disabled={isRunning || markets.length === 0} className="w-full h-10 font-mono text-xs uppercase tracking-widest glow-green" size="lg">
