@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, BarChart3, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import { motion } from "framer-motion";
 import type { SimulationResult } from "@/types/simulation";
 
 interface SummaryStatsProps {
@@ -22,6 +23,7 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: ((result.expectedValue - bankroll) / bankroll * 100).toFixed(1) + "%",
       positive: result.expectedValue > bankroll,
       icon: TrendingUp,
+      glow: "profit",
     },
     {
       label: "Median Outcome",
@@ -29,6 +31,7 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: ((result.medianOutcome - bankroll) / bankroll * 100).toFixed(1) + "%",
       positive: result.medianOutcome > bankroll,
       icon: BarChart3,
+      glow: "neutral",
     },
     {
       label: "Sharpe Ratio",
@@ -36,6 +39,7 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: result.sharpeRatio > 0.5 ? "Good" : result.sharpeRatio > 0 ? "Fair" : "Poor",
       positive: result.sharpeRatio > 0,
       icon: TrendingUp,
+      glow: "profit",
     },
     {
       label: "Max Drawdown",
@@ -43,26 +47,37 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: result.maxDrawdown > 0.5 ? "Severe" : result.maxDrawdown > 0.25 ? "High" : "Moderate",
       positive: result.maxDrawdown < 0.25,
       icon: TrendingDown,
+      glow: "loss",
     },
   ];
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {stats.map((stat) => (
-        <Card key={stat.label} className="border-border/50 bg-card/80 backdrop-blur">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                {stat.label}
-              </span>
-              <stat.icon className={`h-3.5 w-3.5 ${stat.positive ? "text-profit" : "text-loss"}`} />
-            </div>
-            <div className="font-mono text-xl font-bold text-card-foreground">{stat.value}</div>
-            <div className={`text-xs font-mono mt-1 ${stat.positive ? "text-profit" : "text-loss"}`}>
-              {stat.change}
-            </div>
-          </CardContent>
-        </Card>
+      {stats.map((stat, i) => (
+        <motion.div
+          key={stat.label}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.4, delay: i * 0.08, ease: "easeOut" }}
+        >
+          <Card className={`border-border/50 bg-card/80 backdrop-blur overflow-hidden relative group hover:border-${stat.positive ? "profit" : "loss"}/30 transition-colors duration-300`}>
+            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${stat.positive ? "bg-profit/[0.02]" : "bg-loss/[0.02]"}`} />
+            <CardContent className="p-4 relative">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                  {stat.label}
+                </span>
+                <div className={`p-1 rounded ${stat.positive ? "bg-profit/10" : "bg-loss/10"}`}>
+                  <stat.icon className={`h-3 w-3 ${stat.positive ? "text-profit" : "text-loss"}`} />
+                </div>
+              </div>
+              <div className="font-mono text-xl font-bold text-card-foreground">{stat.value}</div>
+              <div className={`inline-flex items-center gap-1 text-xs font-mono mt-1.5 px-1.5 py-0.5 rounded ${stat.positive ? "text-profit bg-profit/10" : "text-loss bg-loss/10"}`}>
+                {stat.change}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       ))}
     </div>
   );
