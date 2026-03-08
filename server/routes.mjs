@@ -7,82 +7,189 @@ function detectPlatform(url) {
   if (url.includes("metaculus.com")) return "Metaculus";
   if (url.includes("manifold.markets")) return "Manifold";
   if (url.includes("kalshi.com")) return "Kalshi";
+  if (url.includes("predictit.org")) return "PredictIt";
   return "Unknown";
 }
 
 function extractSlug(url, platform) {
+  // Clean URL: remove trailing slashes, query strings for matching
+  const cleanUrl = url.split("?")[0].replace(/\/+$/, "");
+
   switch (platform) {
-    case "Polymarket": return url.match(/polymarket\.com\/event\/([^/?#]+)(?:\/([^/?#]+))?/)?.[2] ?? url.match(/polymarket\.com\/event\/([^/?#]+)/)?.[1] ?? null;
-    case "Metaculus": return url.match(/metaculus\.com\/questions\/(\d+)/)?.[1] ?? null;
-    case "Manifold": return url.match(/manifold\.markets\/([^/]+)\/([^/?#]+)/)?.[2] ?? null;
-    case "Kalshi": return url.match(/kalshi\.com\/markets\/(?:[^/]+\/)?([^/?#]+)/)?.[1] ?? null;
+    case "Polymarket": {
+      // /event/slug/sub-slug OR /event/slug
+      const eventMatch = cleanUrl.match(/polymarket\.com\/event\/([^/?#]+)(?:\/([^/?#]+))?/);
+      if (eventMatch) return { type: "event", slug: eventMatch[2] || eventMatch[1] };
+      // /markets/slug (newer format) or /market/slug
+      const marketMatch = cleanUrl.match(/polymarket\.com\/(?:markets?|p)\/([^/?#]+)/);
+      if (marketMatch) return { type: "market", slug: marketMatch[1] };
+      return null;
+    }
+    case "Metaculus": {
+      const m = cleanUrl.match(/metaculus\.com\/questions\/(\d+)/);
+      return m ? m[1] : null;
+    }
+    case "Manifold": {
+      const m = cleanUrl.match(/manifold\.markets\/([^/]+)\/([^/?#]+)/);
+      return m ? m[2] : null;
+    }
+    case "Kalshi": {
+      // /markets/category/TICKER or /markets/TICKER or /events/category/TICKER
+      const parts = cleanUrl.match(/kalshi\.com\/(?:markets|events)\/(?:([^/]+)\/)?([^/?#]+)/);
+      if (parts) return parts[2] || parts[1];
+      return null;
+    }
+    case "PredictIt": {
+      const m = cleanUrl.match(/predictit\.org\/markets\/detail\/(\d+)/);
+      return m ? m[1] : null;
+    }
     default: return null;
   }
 }
 
-async function fetchPolymarket(slug) { /* same */
-  const marketResp = await fetch(`https://gamma-api.polymarket.com/markets/slug/${slug}`);
-  if (marketResp.ok) {
-    const data = await marketResp.json();
-    if (data?.outcomePrices) {
-      const prices = JSON.parse(data.outcomePrices);
-      return { probability: parseFloat(prices[0]), title: data.question || data.title || slug, platform: "Polymarket" };
+async function fetchPolymarket(slugInfo) {
+  if (!slugInfo) return null;
+  const slug = typeof slugInfo === "string" ? slugInfo : slugInfo.slug;
+
+  // Try as market slug first
+  try {
+    const marketResp = await fetch(`https://gamma-api.polymarket.com/markets/slug/${slug}`);
+    if (marketResp.ok) {
+      const data = await marketResp.json();
+      if (data?.outcomePrices) {
+        const prices = JSON.parse(data.outcomePrices);
+        return { probability: parseFloat(prices[0]), title: data.question || data.title || slug, platform: "Polymarket" };
+      }
     }
-  }
-  const eventResp = await fetch(`https://gamma-api.polymarket.com/events/slug/${slug}`);
-  if (eventResp.ok) {
-    const event = await eventResp.json();
-    const market = event?.markets?.[0];
-    if (market?.outcomePrices) {
-      const prices = JSON.parse(market.outcomePrices);
-      return { probability: parseFloat(prices[0]), title: market.question || event.title || slug, platform: "Polymarket" };
+  } catch {}
+
+  // Try as event slug
+  try {
+    const eventResp = await fetch(`https://gamma-api.polymarket.com/events/slug/${slug}`);
+    if (eventResp.ok) {
+      const event = await eventResp.json();
+      const market = event?.markets?.[0];
+      if (market?.outcomePrices) {
+        const prices = JSON.parse(market.outcomePrices);
+        return { probability: parseFloat(prices[0]), title: market.question || event.title || slug, platform: "Polymarket" };
+      }
     }
-  }
+  } catch {}
+
+  // Try search as fallback
+  try {
+    const searchResp = await fetch(`https://gamma-api.polymarket.com/markets?slug_like=${slug}&limit=1`);
+    if (searchResp.ok) {
+      const results = await searchResp.json();
+      const market = results?.[0];
+      if (market?.outcomePrices) {
+        const prices = JSON.parse(market.outcomePrices);
+        return { probability: parseFloat(prices[0]), title: market.question || market.title || slug, platform: "Polymarket" };
+      }
+    }
+  } catch {}
+
   return null;
 }
 async function fetchMetaculus(questionId) {
-  const resp = await fetch(`https://www.metaculus.com/api/posts/${questionId}/`, { headers: { Accept: "application/json" } });
-  if (!resp.ok) {
+  try {
+    const resp = await fetch(`https://www.metaculus.com/api/posts/${questionId}/`, { headers: { Accept: "application/json" } });
+    if (resp.ok) {
+      const data = await resp.json();
+      const forecast = data?.question?.aggregations?.recency_weighted?.latest;
+      const prob = forecast?.centers?.[0] ?? forecast?.means?.[0] ?? null;
+      return { probability: prob, title: data.title || data?.question?.title || `Question ${questionId}`, platform: "Metaculus" };
+    }
+  } catch {}
+  try {
     const legacyResp = await fetch(`https://www.metaculus.com/api2/questions/${questionId}/`);
-    if (!legacyResp.ok) return null;
-    const data = await legacyResp.json();
-    const prob = data?.community_prediction?.full?.q2 ?? data?.prediction_timeseries?.[data.prediction_timeseries.length - 1]?.community_prediction;
-    return { probability: prob ?? null, title: data.title || data.title_short || `Question ${questionId}`, platform: "Metaculus" };
-  }
-  const data = await resp.json();
-  const forecast = data?.question?.aggregations?.recency_weighted?.latest;
-  const prob = forecast?.centers?.[0] ?? forecast?.means?.[0] ?? null;
-  return { probability: prob, title: data.title || data?.question?.title || `Question ${questionId}`, platform: "Metaculus" };
+    if (legacyResp.ok) {
+      const data = await legacyResp.json();
+      const prob = data?.community_prediction?.full?.q2 ?? data?.prediction_timeseries?.[data.prediction_timeseries.length - 1]?.community_prediction;
+      return { probability: prob ?? null, title: data.title || data.title_short || `Question ${questionId}`, platform: "Metaculus" };
+    }
+  } catch {}
+  return null;
 }
 async function fetchManifold(slug) {
-  const resp = await fetch(`https://api.manifold.markets/v0/slug/${slug}`); if (!resp.ok) return null;
-  const data = await resp.json(); return { probability: data.probability ?? null, title: data.question || data.title || slug, platform: "Manifold" };
+  try {
+    const resp = await fetch(`https://api.manifold.markets/v0/slug/${slug}`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return { probability: data.probability ?? null, title: data.question || data.title || slug, platform: "Manifold" };
+  } catch { return null; }
 }
 async function fetchKalshi(ticker) {
-  const upper = ticker.toUpperCase().replace(/-/g, "");
-  for (const apiUrl of [`https://api.elections.kalshi.com/trade-api/v2/markets/${upper}`,`https://api.elections.kalshi.com/trade-api/v2/markets/${ticker}`,`https://trading-api.kalshi.com/trade-api/v2/markets/${upper}`,`https://trading-api.kalshi.com/trade-api/v2/markets/${ticker}`]) {
-    try {
-      const resp = await fetch(apiUrl, { headers: { Accept: "application/json" } });
-      if (!resp.ok) continue;
-      const market = (await resp.json()).market;
-      if (market) return { probability: (market.yes_price ?? market.last_price ?? null) / 100, title: market.title || market.subtitle || ticker, platform: "Kalshi" };
-    } catch {}
+  // Try multiple ticker formats
+  const variants = [
+    ticker.toUpperCase().replace(/-/g, ""),
+    ticker.toUpperCase(),
+    ticker,
+    ticker.toLowerCase(),
+  ];
+  const bases = [
+    "https://api.elections.kalshi.com/trade-api/v2/markets",
+    "https://trading-api.kalshi.com/trade-api/v2/markets",
+  ];
+  for (const base of bases) {
+    for (const variant of variants) {
+      try {
+        const resp = await fetch(`${base}/${variant}`, { headers: { Accept: "application/json" } });
+        if (!resp.ok) continue;
+        const body = await resp.json();
+        const market = body.market || body;
+        if (market?.yes_price || market?.last_price || market?.yes_bid) {
+          const price = market.yes_price ?? market.last_price ?? market.yes_bid ?? null;
+          return {
+            probability: price != null ? (price > 1 ? price / 100 : price) : null,
+            title: market.title || market.subtitle || ticker,
+            platform: "Kalshi",
+          };
+        }
+      } catch {}
+    }
   }
   return null;
+}
+async function fetchPredictIt(marketId) {
+  try {
+    const resp = await fetch(`https://www.predictit.org/api/marketdata/markets/${marketId}`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const contract = data.contracts?.[0];
+    return {
+      probability: contract?.lastTradePrice ?? contract?.bestBuyYesCost ?? null,
+      title: data.name || data.shortName || `Market ${marketId}`,
+      platform: "PredictIt",
+    };
+  } catch { return null; }
 }
 
 export async function firecrawlScrape(body) {
   const { url } = body ?? {};
   if (!url || typeof url !== "string") return jsonResponse(400, { error: "URL is required" });
-  const platform = detectPlatform(url);
-  const slug = extractSlug(url, platform);
-  if (!slug) return jsonResponse(400, { error: "Could not extract identifier from URL. Supported: Polymarket, Metaculus, Manifold, Kalshi." });
+
+  const trimmed = url.trim().replace(/\/+$/, "");
+  const platform = detectPlatform(trimmed);
+  if (platform === "Unknown") {
+    return jsonResponse(400, { error: "Unsupported platform. Supported: Polymarket, Metaculus, Manifold, Kalshi, PredictIt." });
+  }
+
+  const slug = extractSlug(trimmed, platform);
+  if (!slug) return jsonResponse(400, { error: `Could not parse ${platform} URL. Try pasting the full market page URL.` });
+
+  console.log(`[scrape] ${platform} → slug:`, JSON.stringify(slug));
+
   const result = platform === "Polymarket" ? await fetchPolymarket(slug)
     : platform === "Metaculus" ? await fetchMetaculus(slug)
     : platform === "Manifold" ? await fetchManifold(slug)
     : platform === "Kalshi" ? await fetchKalshi(slug)
+    : platform === "PredictIt" ? await fetchPredictIt(slug)
     : null;
-  if (!result || result.probability == null) return jsonResponse(422, { error: `Could not extract probability from ${platform} API`, platform });
+
+  if (!result || result.probability == null) {
+    return jsonResponse(422, { error: `Could not extract probability from ${platform}. The market may be closed or the API format may have changed.`, platform });
+  }
   return jsonResponse(200, result);
 }
 
