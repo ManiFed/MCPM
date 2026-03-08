@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { scrapeMarketUrl } from "@/lib/marketScraper";
 import { KellyIndicator } from "@/components/input/KellyIndicator";
 import { EdgeCalculator } from "@/components/input/EdgeCalculator";
+import { BetSizeOptimizer } from "@/components/input/BetSizeOptimizer";
 import { OutcomeEditor } from "@/components/input/OutcomeEditor";
 
 interface InputPanelProps {
