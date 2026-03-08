@@ -1,52 +1,88 @@
 
 
-# Leveraged Prediction Market Simulator
+# More Sick Features -- Plan
 
-## Overview
-A dark, terminal-style Monte Carlo simulator for evaluating leveraged positions on prediction markets. Users input a market probability (via link or manual entry), configure leverage and risk parameters, and get rich visualizations of simulated outcomes plus AI-generated bull/bear arguments.
+## 1. Strategy Comparison Mode (Lock & Compare)
+Run simulation A, lock results, tweak params, run simulation B -- see both overlaid on every chart.
 
-## Design
-- **Dark, technical aesthetic** — dark backgrounds, monospace accents, neon green/amber/red color coding for profit/neutral/loss
-- **Single-page app** with collapsible input panel on the left and a rich results dashboard on the right
+- Add `comparisonResult` + `comparisonParams` state in `Index.tsx`
+- "Lock & Compare" button in `ResultsDashboard` header saves current result as baseline
+- "Clear Comparison" button resets
+- Update `SummaryStats` to show delta columns (A vs B)
+- Update `EquityFanChart` to overlay two median lines (green vs purple)
+- Update `OutcomeHistogram` to show dual distributions
+- Update `RuinGauge` to show both probabilities
+
+## 2. Scenario Presets
+One-click preset buttons that auto-fill common strategies: "Conservative", "Kelly Optimal", "Aggressive Degen", "Coin Flip".
+
+- Add preset buttons row above the Run button in `InputPanel.tsx`
+- Each preset sets probability, leverage, position size, bankroll, and num bets
+- Kelly preset auto-computes optimal position size from current probability
+
+## 3. Profit Target & Stop Loss
+Let users set a profit target (e.g. 2x bankroll) and stop loss (e.g. 0.5x bankroll) that terminate paths early.
+
+- Add `profitTarget` and `stopLoss` optional fields to `SimulationParams`
+- Add two new sliders in `InputPanel` under a collapsible "Risk Controls" section
+- Modify `runSinglePath` in `simulationMath.ts` to break early when equity hits target or stop
+- Show "% paths hit target" and "% paths hit stop" in `SummaryStats`
+
+## 4. Win Streak / Loss Streak Analysis
+Show the distribution of max consecutive wins and losses across simulations.
+
+- Compute streak data in `simulationMath.ts` during `runSinglePath` (track consecutive win/loss counts)
+- New `src/components/dashboard/StreakAnalysis.tsx` -- dual bar chart showing max win streak and max loss streak distributions
+- Add to `ResultsDashboard` after RiskMetrics
+
+## 5. Saved Simulations History
+Auto-save each simulation run to local storage with timestamp. Users can recall and compare past runs.
+
+- New `src/hooks/useSimulationHistory.ts` -- saves params + summary stats (not full curves) to localStorage
+- New `src/components/dashboard/SimulationHistory.tsx` -- dropdown/drawer listing past runs with key stats
+- Click to re-run with those params
+- Max 20 entries, FIFO eviction
+
+## 6. Edge Calculator
+Show the mathematical edge of the current setup: expected value per bet, breakeven probability, and how far the user's probability estimate is from breakeven.
+
+- New `src/components/input/EdgeCalculator.tsx` -- compact card below Kelly indicator
+- Formulas: `edge = (prob * payout) - (1-prob)`, `breakeven = 1 / (1 + payoutRatio)`
+- Color-coded: green if positive edge, red if negative
 
 ---
 
-## Features
+## Implementation Order
 
-### 1. Market Input
-- **Manual entry**: Slider or text input for base probability (0–100%)
-- **Paste link**: Accept Polymarket, Metaculus, or Manifold URLs → use Firecrawl (via edge function) to scrape the current probability from the page
-- Display extracted market title and current probability with a confirmation step
+```text
+Phase 1 (quick wins, high impact):
+  - Scenario Presets
+  - Edge Calculator  
+  - Profit Target & Stop Loss
 
-### 2. Simulation Parameters
-- **Leverage slider**: 1x–10x with preset buttons (2x, 3x, 5x, 10x)
-- **Risk tolerance**: Conservative / Moderate / Aggressive (maps to position sizing — e.g., % of bankroll per bet)
-- **Number of simulations**: 1,000 / 10,000 / 50,000 runs
-- **Bankroll**: Starting capital input
+Phase 2 (visual/analytical):
+  - Win/Loss Streak Analysis
+  - Strategy Comparison Mode
 
-### 3. Monte Carlo Engine (client-side JS)
-- Runs simulations in the browser using Web Workers to avoid UI blocking
-- Each run simulates repeated bets at the given probability and leverage
-- Calculates per-run equity curves and final outcomes
+Phase 3 (quality of life):
+  - Saved Simulations History
+```
 
-### 4. Results Dashboard (Rich Visualizations)
-- **Summary stats panel**: Expected value, median outcome, Sharpe-like ratio, max drawdown
-- **Probability of ruin gauge**: Animated circular gauge showing % chance of going to zero
-- **Outcome distribution chart**: Histogram of final portfolio values across all simulations (Recharts)
-- **Equity curve fan chart**: Spaghetti plot of Monte Carlo paths with 5th/25th/50th/75th/95th percentile bands highlighted
-- **Confidence intervals table**: Key percentiles (1%, 5%, 25%, 50%, 75%, 95%, 99%) with color coding
-- **Risk/reward scatter**: Expected return vs. probability of ruin at different leverage levels
+## Files to Create
+- `src/components/input/EdgeCalculator.tsx`
+- `src/components/dashboard/StreakAnalysis.tsx`
+- `src/hooks/useSimulationHistory.ts`
+- `src/components/dashboard/SimulationHistory.tsx`
 
-### 5. AI Bull/Bear Agent (Lovable AI via Edge Function)
-- After simulation results are generated, a "Get AI Analysis" button triggers the AI
-- Sends the simulation parameters and summary stats to an edge function
-- AI returns a structured **bull case** and **bear case** argument for taking the levered position
-- Rendered in side-by-side cards with markdown formatting
-- Streaming response for real-time feel
-
-### 6. Backend Requirements
-- **Lovable Cloud** for edge functions:
-  - `firecrawl-scrape`: Scrape prediction market URLs for probability extraction
-  - `ai-analysis`: Call Lovable AI to generate bull/bear arguments
-- **Firecrawl connector** for market link scraping
+## Files to Modify
+- `src/types/simulation.ts` -- add profitTarget, stopLoss, streak types
+- `src/lib/simulationMath.ts` -- early exit logic, streak tracking, return new fields
+- `src/components/InputPanel.tsx` -- presets row, risk controls section, edge calculator
+- `src/components/ResultsDashboard.tsx` -- comparison overlay, streak chart, history access
+- `src/components/dashboard/SummaryStats.tsx` -- comparison columns, target/stop hit rates
+- `src/components/dashboard/EquityFanChart.tsx` -- dual overlay for comparison
+- `src/components/dashboard/OutcomeHistogram.tsx` -- dual histogram
+- `src/components/dashboard/RuinGauge.tsx` -- dual display
+- `src/pages/Index.tsx` -- comparison state, history hook
+- `src/workers/monteCarlo.worker.ts` -- pass through new params
 
