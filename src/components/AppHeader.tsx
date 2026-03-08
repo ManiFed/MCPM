@@ -10,6 +10,7 @@ export function AppHeader() {
 
   const navItems = [
     { to: "/", icon: FlaskConical, label: "Simulator" },
+    { to: "/markets", icon: TrendingUp, label: "Markets" },
     { to: "/backtest", icon: History, label: "Backtest" },
     { to: "/portfolio", icon: Layers, label: "Portfolio" },
     { to: "/methodology", icon: BookOpen, label: "Methodology" },
