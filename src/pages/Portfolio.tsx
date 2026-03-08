@@ -49,8 +49,8 @@ const Portfolio = () => {
             <div className="space-y-3">
               <MarketList markets={markets} onChange={setMarkets} />
 
-              <Card className="border-border/50 bg-card/80 backdrop-blur">
-                <CardContent className="space-y-4 px-4 py-4">
+              <Card className="border-border/50 bg-card/80 backdrop-blur p-4">
+                <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <Label className="text-[10px] font-mono text-muted-foreground">SIMULATIONS</Label>
