@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface RuinGaugeProps {
   probability: number; // 0-1
+  comparisonProbability?: number;
 }
 
-export function RuinGauge({ probability }: RuinGaugeProps) {
+export function RuinGauge({ probability, comparisonProbability }: RuinGaugeProps) {
   const pct = probability * 100;
   const circumference = 2 * Math.PI * 60;
   const arcLength = circumference * 0.75;
@@ -32,6 +33,17 @@ export function RuinGauge({ probability }: RuinGaugeProps) {
               strokeDasharray={dashArray}
               strokeLinecap="round"
             />
+            {comparisonProbability !== undefined && (
+              <circle
+                cx="70" cy="70" r="60"
+                fill="none"
+                stroke="hsl(280, 70%, 60%)"
+                strokeWidth="4"
+                strokeDasharray={`${comparisonProbability * arcLength} ${circumference}`}
+                strokeLinecap="round"
+                opacity={0.5}
+              />
+            )}
             <motion.circle
               cx="70" cy="70" r="60"
               fill="none"
@@ -56,6 +68,11 @@ export function RuinGauge({ probability }: RuinGaugeProps) {
               {pct.toFixed(1)}%
             </motion.span>
             <span className="text-[10px] font-mono text-muted-foreground mt-1">RUIN</span>
+            {comparisonProbability !== undefined && (
+              <span className="text-[9px] font-mono text-chart-5 mt-0.5">
+                A: {(comparisonProbability * 100).toFixed(1)}%
+              </span>
+            )}
           </div>
         </div>
       </CardContent>

@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface EquityFanChartProps {
   equityCurves: number[][];
+  comparisonCurves?: number[][];
 }
 
-export function EquityFanChart({ equityCurves }: EquityFanChartProps) {
+export function EquityFanChart({ equityCurves, comparisonCurves }: EquityFanChartProps) {
   const data = useMemo(() => {
     if (equityCurves.length === 0) return [];
     const numSteps = equityCurves[0].length;
@@ -17,18 +18,27 @@ export function EquityFanChart({ equityCurves }: EquityFanChartProps) {
       const n = values.length;
       const pct = (p: number) => values[Math.floor(p * n / 100)] ?? 0;
 
-      result.push({
+      const point: Record<string, number> = {
         step,
         p5: pct(5),
         p25: pct(25),
         p50: pct(50),
         p75: pct(75),
         p95: pct(95),
-      });
+      };
+
+      if (comparisonCurves && comparisonCurves.length > 0) {
+        const cValues = comparisonCurves.map(c => c[step] ?? 0).sort((a, b) => a - b);
+        const cn = cValues.length;
+        const cpct = (p: number) => cValues[Math.floor(p * cn / 100)] ?? 0;
+        point.cp50 = cpct(50);
+      }
+
+      result.push(point);
     }
 
     return result;
-  }, [equityCurves]);
+  }, [equityCurves, comparisonCurves]);
 
   const formatValue = (v: number) =>
     v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${v.toFixed(0)}`;
@@ -82,6 +92,9 @@ export function EquityFanChart({ equityCurves }: EquityFanChartProps) {
             <Area type="monotone" dataKey="p50" stroke="hsl(142, 72%, 50%)" fill="none" strokeWidth={2} />
             <Area type="monotone" dataKey="p25" stroke="none" fill="hsl(220, 20%, 7%)" fillOpacity={0.5} />
             <Area type="monotone" dataKey="p5" stroke="none" fill="hsl(220, 20%, 7%)" fillOpacity={0.8} />
+            {comparisonCurves && (
+              <Area type="monotone" dataKey="cp50" stroke="hsl(280, 70%, 60%)" fill="none" strokeWidth={2} strokeDasharray="5 3" />
+            )}
           </AreaChart>
         </ResponsiveContainer>
         <div className="flex justify-center gap-4 mt-2">
@@ -89,6 +102,7 @@ export function EquityFanChart({ equityCurves }: EquityFanChartProps) {
             { label: "5th–95th", color: "bg-profit/20" },
             { label: "25th–75th", color: "bg-neutral/20" },
             { label: "Median", color: "bg-profit" },
+            ...(comparisonCurves ? [{ label: "Baseline (A)", color: "bg-chart-5" }] : []),
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1.5">
               <div className={`w-3 h-1.5 rounded-full ${l.color}`} />

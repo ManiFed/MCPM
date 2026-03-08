@@ -16,12 +16,19 @@ export interface SimulationParams {
   marketPlatform?: string;
   multiOutcome?: boolean;
   outcomes?: MarketOutcome[];
+  profitTarget?: number; // multiplier of bankroll, e.g. 2.0 = 2x
+  stopLoss?: number; // multiplier of bankroll, e.g. 0.5 = 50% remaining
 }
 
 export interface LeveragePoint {
   leverage: number;
   expectedReturn: number;
   ruinProbability: number;
+}
+
+export interface StreakStats {
+  maxWinStreaks: number[]; // distribution of max win streaks per sim
+  maxLossStreaks: number[]; // distribution of max loss streaks per sim
 }
 
 export interface SimulationResult {
@@ -35,6 +42,9 @@ export interface SimulationResult {
   sharpeRatio: number;
   meanReturn: number;
   leverageSweep: LeveragePoint[];
+  pctHitTarget?: number; // fraction of paths that hit profit target
+  pctHitStop?: number; // fraction of paths that hit stop loss
+  streaks?: StreakStats;
 }
 
 export interface MarketInfo {

@@ -5,14 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface OutcomeHistogramProps {
   finalValues: number[];
   bankroll: number;
+  comparisonValues?: number[];
 }
 
-export function OutcomeHistogram({ finalValues, bankroll }: OutcomeHistogramProps) {
+export function OutcomeHistogram({ finalValues, bankroll, comparisonValues }: OutcomeHistogramProps) {
   const data = useMemo(() => {
-    const nonZero = finalValues.filter(v => v > 0);
+    const allValues = comparisonValues ? [...finalValues, ...comparisonValues] : finalValues;
+    const nonZero = allValues.filter(v => v > 0);
     if (nonZero.length === 0) return [];
 
-    const min = Math.min(...finalValues);
+    const min = Math.min(...allValues);
     const max = Math.max(...nonZero);
     const numBins = 40;
     const binWidth = (max - min) / numBins || 1;
@@ -20,6 +22,7 @@ export function OutcomeHistogram({ finalValues, bankroll }: OutcomeHistogramProp
     const bins = Array.from({ length: numBins }, (_, i) => ({
       range: min + i * binWidth,
       count: 0,
+      countA: 0,
       label: "",
     }));
 
@@ -28,12 +31,19 @@ export function OutcomeHistogram({ finalValues, bankroll }: OutcomeHistogramProp
       if (idx >= 0) bins[idx].count++;
     }
 
+    if (comparisonValues) {
+      for (const v of comparisonValues) {
+        const idx = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
+        if (idx >= 0) bins[idx].countA++;
+      }
+    }
+
     return bins.map((b) => ({
       ...b,
       label: b.range >= 1000 ? `$${(b.range / 1000).toFixed(0)}K` : `$${b.range.toFixed(0)}`,
       fill: b.range >= bankroll ? "hsl(142, 72%, 50%)" : "hsl(0, 85%, 55%)",
     }));
-  }, [finalValues, bankroll]);
+  }, [finalValues, bankroll, comparisonValues]);
 
   return (
     <Card className="border-border/50 bg-card/80 backdrop-blur">
@@ -73,7 +83,10 @@ export function OutcomeHistogram({ finalValues, bankroll }: OutcomeHistogramProp
               strokeDasharray="3 3"
               label={{ value: "Start", fill: "hsl(45, 100%, 55%)", fontSize: 9, fontFamily: "JetBrains Mono" }}
             />
-            <Bar dataKey="count" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="count" name="Current (B)" radius={[2, 2, 0, 0]} />
+            {comparisonValues && (
+              <Bar dataKey="countA" name="Baseline (A)" fill="hsl(280, 70%, 60%)" opacity={0.5} radius={[2, 2, 0, 0]} />
+            )}
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

@@ -1,14 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, Target, OctagonX } from "lucide-react";
 import { motion } from "framer-motion";
 import type { SimulationResult } from "@/types/simulation";
 
 interface SummaryStatsProps {
   result: SimulationResult;
   bankroll: number;
+  comparisonResult?: SimulationResult | null;
 }
 
-export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
+export function SummaryStats({ result, bankroll, comparisonResult }: SummaryStatsProps) {
   const formatCurrency = (v: number) =>
     v >= 1_000_000
       ? `$${(v / 1_000_000).toFixed(1)}M`
@@ -23,7 +24,7 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: ((result.expectedValue - bankroll) / bankroll * 100).toFixed(1) + "%",
       positive: result.expectedValue > bankroll,
       icon: TrendingUp,
-      glow: "profit",
+      delta: comparisonResult ? result.expectedValue - comparisonResult.expectedValue : null,
     },
     {
       label: "Median Outcome",
@@ -31,7 +32,7 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: ((result.medianOutcome - bankroll) / bankroll * 100).toFixed(1) + "%",
       positive: result.medianOutcome > bankroll,
       icon: BarChart3,
-      glow: "neutral",
+      delta: comparisonResult ? result.medianOutcome - comparisonResult.medianOutcome : null,
     },
     {
       label: "Sharpe Ratio",
@@ -39,7 +40,7 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: result.sharpeRatio > 0.5 ? "Good" : result.sharpeRatio > 0 ? "Fair" : "Poor",
       positive: result.sharpeRatio > 0,
       icon: TrendingUp,
-      glow: "profit",
+      delta: comparisonResult ? result.sharpeRatio - comparisonResult.sharpeRatio : null,
     },
     {
       label: "Max Drawdown",
@@ -47,9 +48,31 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
       change: result.maxDrawdown > 0.5 ? "Severe" : result.maxDrawdown > 0.25 ? "High" : "Moderate",
       positive: result.maxDrawdown < 0.25,
       icon: TrendingDown,
-      glow: "loss",
+      delta: comparisonResult ? result.maxDrawdown - comparisonResult.maxDrawdown : null,
     },
   ];
+
+  // Add target/stop stats if present
+  if (result.pctHitTarget !== undefined) {
+    stats.push({
+      label: "Hit Target",
+      value: (result.pctHitTarget * 100).toFixed(1) + "%",
+      change: result.pctHitTarget > 0.5 ? "Likely" : "Unlikely",
+      positive: result.pctHitTarget > 0.5,
+      icon: Target,
+      delta: null,
+    });
+  }
+  if (result.pctHitStop !== undefined) {
+    stats.push({
+      label: "Hit Stop",
+      value: (result.pctHitStop * 100).toFixed(1) + "%",
+      change: result.pctHitStop > 0.3 ? "Frequent" : "Rare",
+      positive: result.pctHitStop < 0.3,
+      icon: OctagonX,
+      delta: null,
+    });
+  }
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -72,8 +95,15 @@ export function SummaryStats({ result, bankroll }: SummaryStatsProps) {
                 </div>
               </div>
               <div className="font-mono text-xl font-bold text-card-foreground">{stat.value}</div>
-              <div className={`inline-flex items-center gap-1 text-xs font-mono mt-1.5 px-1.5 py-0.5 rounded ${stat.positive ? "text-profit bg-profit/10" : "text-loss bg-loss/10"}`}>
-                {stat.change}
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className={`inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded ${stat.positive ? "text-profit bg-profit/10" : "text-loss bg-loss/10"}`}>
+                  {stat.change}
+                </div>
+                {stat.delta !== null && (
+                  <span className={`text-[10px] font-mono ${stat.delta > 0 ? "text-profit" : "text-loss"}`}>
+                    {stat.delta > 0 ? "▲" : "▼"} vs A
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>
