@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import Methodology from "./pages/Methodology";
 import Backtest from "./pages/Backtest";
 import Portfolio from "./pages/Portfolio";
+import { CommandPalette } from "./components/CommandPalette";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <CommandPalette />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/methodology" element={<Methodology />} />
