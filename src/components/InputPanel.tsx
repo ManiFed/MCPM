@@ -29,6 +29,11 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
     initialParams?.marketTitle ? { title: initialParams.marketTitle, probability: initialParams.probability ?? 0.5, platform: initialParams.marketPlatform ?? "", url: "" } : null
   );
   const [isScraping, setIsScraping] = useState(false);
+  const [multiOutcome, setMultiOutcome] = useState(false);
+  const [outcomes, setOutcomes] = useState<MarketOutcome[]>([
+    { label: "Win", probability: 0.5, payoutMultiplier: 1 },
+    { label: "Lose", probability: 0.5, payoutMultiplier: -1 },
+  ]);
 
   const handleScrapeUrl = async () => {
     if (!marketUrl.trim()) return;
