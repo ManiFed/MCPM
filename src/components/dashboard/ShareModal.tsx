@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import type { SimulationParams, SimulationResult } from "@/types/simulation";
 import { SnapshotCard } from "./SnapshotCard";
-import html2canvas from "html2canvas";
+
 
 interface ShareModalProps {
   params: SimulationParams;
