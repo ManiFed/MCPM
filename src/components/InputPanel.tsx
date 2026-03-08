@@ -66,6 +66,13 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
   };
 
   const handleRun = () => {
+    if (multiOutcome) {
+      const totalProb = outcomes.reduce((s, o) => s + o.probability, 0);
+      if (Math.abs(totalProb - 1) > 0.02) {
+        toast.error("Outcome probabilities must sum to ~100%");
+        return;
+      }
+    }
     onRunSimulation({
       probability: probability / 100,
       leverage,
@@ -76,6 +83,8 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
       marketTitle: marketInfo?.title,
       marketUrl: marketInfo?.url,
       marketPlatform: marketInfo?.platform,
+      multiOutcome,
+      outcomes: multiOutcome ? outcomes : undefined,
     });
   };
 
