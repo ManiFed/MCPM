@@ -1,4 +1,4 @@
-import { Activity, BookOpen, FlaskConical, Heart, History, Layers, Menu, Zap } from "lucide-react";
+import { Activity, BookOpen, FlaskConical, Heart, History, Layers, Menu, TrendingUp, Zap } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { motion } from "framer-motion";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -10,6 +10,7 @@ export function AppHeader() {
 
   const navItems = [
     { to: "/", icon: FlaskConical, label: "Simulator" },
+    { to: "/markets", icon: TrendingUp, label: "Markets" },
     { to: "/backtest", icon: History, label: "Backtest" },
     { to: "/portfolio", icon: Layers, label: "Portfolio" },
     { to: "/methodology", icon: BookOpen, label: "Methodology" },

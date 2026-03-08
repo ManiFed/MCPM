@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import Methodology from "./pages/Methodology";
 import Backtest from "./pages/Backtest";
 import Portfolio from "./pages/Portfolio";
+import Markets from "./pages/Markets";
 import { CommandPalette } from "./components/CommandPalette";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/methodology" element={<Methodology />} />
           <Route path="/backtest" element={<Backtest />} />
           <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/markets" element={<Markets />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

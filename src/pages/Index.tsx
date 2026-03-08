@@ -21,6 +21,16 @@ const Index = () => {
 
   const sharedParams = searchParams.get("p") ? decodeParamsFromUrl(searchParams.toString()) : null;
 
+  // Support pre-fill from /markets "Simulate" button
+  const marketPreFill = searchParams.get("prob") ? {
+    probability: parseFloat(searchParams.get("prob")!),
+    marketTitle: searchParams.get("title") || undefined,
+    marketPlatform: searchParams.get("platform") || undefined,
+    marketUrl: searchParams.get("url") || undefined,
+  } as Partial<SimulationParams> : null;
+
+  const effectiveInitialParams = sharedParams || marketPreFill;
+
   // Save to history when a simulation completes
   useEffect(() => {
     if (result && lastParams) {
@@ -143,7 +153,7 @@ const Index = () => {
             className="space-y-3"
           >
             <Card className="p-3 md:p-4 bg-card/70 border-border/60 backdrop-blur">
-              <InputPanel onRunSimulation={handleRun} isRunning={isRunning} initialParams={sharedParams} />
+              <InputPanel onRunSimulation={handleRun} isRunning={isRunning} initialParams={effectiveInitialParams} />
             </Card>
             <SimulationHistory history={history} onRerun={handleRun} onClear={clearHistory} />
           </motion.div>
