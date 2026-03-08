@@ -7,6 +7,7 @@ import { EquityFanChart } from "./dashboard/EquityFanChart";
 import { ConfidenceTable } from "./dashboard/ConfidenceTable";
 import { RiskRewardScatter } from "./dashboard/RiskRewardScatter";
 import { AIAnalysisPanel } from "./dashboard/AIAnalysisPanel";
+import { ShareModal } from "./dashboard/ShareModal";
 import { Progress } from "@/components/ui/progress";
 
 interface ResultsDashboardProps {
@@ -56,6 +57,11 @@ export function ResultsDashboard({ result, isRunning, progress, params }: Result
       transition={{ duration: 0.5 }}
       className="space-y-4"
     >
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Results</span>
+        <ShareModal params={params} result={result} />
+      </div>
+
       <SummaryStats result={result} bankroll={params.bankroll} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

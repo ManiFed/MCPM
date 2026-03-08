@@ -40,3 +40,9 @@ export interface AIAnalysis {
   bullCase: string;
   bearCase: string;
 }
+
+// Backtest types
+export type { PathPattern, BacktestParams, BacktestResult } from "@/lib/backtestMath";
+
+// Portfolio types
+export type { MarketConfig, PortfolioResult } from "@/lib/portfolioMath";
