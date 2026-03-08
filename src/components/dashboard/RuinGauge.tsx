@@ -29,7 +29,7 @@ export function RuinGauge({ probability }: RuinGaugeProps) {
               fill="none"
               stroke="hsl(220, 15%, 12%)"
               strokeWidth="10"
-              strokeDasharray={circumference * 0.75}
+              strokeDasharray={dashArray}
               strokeLinecap="round"
             />
             <motion.circle
@@ -37,9 +37,9 @@ export function RuinGauge({ probability }: RuinGaugeProps) {
               fill="none"
               stroke={color}
               strokeWidth="10"
-              strokeDasharray={circumference * 0.75}
+              strokeDasharray={dashArray}
               strokeLinecap="round"
-              initial={{ strokeDashoffset: circumference * 0.75 }}
+              initial={{ strokeDashoffset: arcLength }}
               animate={{ strokeDashoffset }}
               transition={{ duration: 1.5, ease: "easeOut" }}
               style={{ filter: `drop-shadow(0 0 8px ${color})` }}
