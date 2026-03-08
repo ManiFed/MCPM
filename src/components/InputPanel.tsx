@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link2, Play, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import type { SimulationParams, MarketInfo, MarketOutcome } from "@/types/simulation";
 import { toast } from "sonner";
-import { apiUrl } from "@/lib/api";
+import { scrapeMarketUrl } from "@/lib/marketScraper";
 import { KellyIndicator } from "@/components/input/KellyIndicator";
 import { OutcomeEditor } from "@/components/input/OutcomeEditor";
 
