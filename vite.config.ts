@@ -32,14 +32,6 @@ export default defineConfig(() => ({
   },
 
   optimizeDeps: {
-    include: [
-      "@tanstack/react-query",
-      "react",
-      "react-dom",
-      "react-router-dom",
-      "framer-motion",
-      "recharts",
-      "@supabase/supabase-js",
-    ],
+    include: ["@tanstack/react-query"],
   },
 }));
