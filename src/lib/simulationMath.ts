@@ -1,4 +1,4 @@
-import type { LeveragePoint, MarketOutcome, SimulationParams } from "@/types/simulation";
+import type { LeveragePoint, MarketOutcome, SimulationParams, StreakStats } from "@/types/simulation";
 
 interface RunOptions {
   random?: () => number;
@@ -18,6 +18,9 @@ export interface MonteCarloResult {
   sharpeRatio: number;
   meanReturn: number;
   leverageSweep: LeveragePoint[];
+  pctHitTarget?: number;
+  pctHitStop?: number;
+  streaks?: StreakStats;
 }
 
 const DEFAULT_LEVERAGE_LEVELS = [1, 2, 3, 5, 7, 10];
@@ -31,10 +34,29 @@ function resolveOutcome(outcomes: MarketOutcome[], roll: number): number {
   return outcomes[outcomes.length - 1].payoutMultiplier;
 }
 
-function runSinglePath(params: SimulationParams, random: () => number): { finalEquity: number; curve: number[] } {
+interface PathResult {
+  finalEquity: number;
+  curve: number[];
+  hitTarget: boolean;
+  hitStop: boolean;
+  maxWinStreak: number;
+  maxLossStreak: number;
+}
+
+function runSinglePath(params: SimulationParams, random: () => number): PathResult {
   let equity = params.bankroll;
   const curve = [equity];
   const isMulti = params.multiOutcome && params.outcomes && params.outcomes.length >= 2;
+
+  const targetEquity = params.profitTarget ? params.bankroll * params.profitTarget : Infinity;
+  const stopEquity = params.stopLoss ? params.bankroll * params.stopLoss : 0;
+
+  let hitTarget = false;
+  let hitStop = false;
+  let currentWinStreak = 0;
+  let currentLossStreak = 0;
+  let maxWinStreak = 0;
+  let maxLossStreak = 0;
 
   for (let bet = 0; bet < params.numBets; bet++) {
     if (equity <= 0) {
@@ -42,27 +64,55 @@ function runSinglePath(params: SimulationParams, random: () => number): { finalE
       continue;
     }
 
+    // Check profit target / stop loss
+    if (equity >= targetEquity) {
+      hitTarget = true;
+      // Fill remaining with final equity
+      for (let r = bet; r < params.numBets; r++) curve.push(equity);
+      break;
+    }
+    if (equity <= stopEquity && stopEquity > 0) {
+      hitStop = true;
+      for (let r = bet; r < params.numBets; r++) curve.push(equity);
+      break;
+    }
+
     const notionalFraction = params.positionSize * params.leverage;
     const riskAmount = equity * Math.min(1, notionalFraction);
     const roll = random();
+    let won = false;
 
     if (isMulti) {
       const multiplier = resolveOutcome(params.outcomes!, roll);
       equity += riskAmount * multiplier;
+      won = multiplier > 0;
     } else {
       if (roll < params.probability) {
         const payoutRatio = (1 - params.probability) / params.probability;
         equity += riskAmount * payoutRatio;
+        won = true;
       } else {
         equity -= riskAmount;
+        won = false;
       }
+    }
+
+    // Track streaks
+    if (won) {
+      currentWinStreak++;
+      currentLossStreak = 0;
+      if (currentWinStreak > maxWinStreak) maxWinStreak = currentWinStreak;
+    } else {
+      currentLossStreak++;
+      currentWinStreak = 0;
+      if (currentLossStreak > maxLossStreak) maxLossStreak = currentLossStreak;
     }
 
     if (equity < 0) equity = 0;
     curve.push(equity);
   }
 
-  return { finalEquity: equity, curve };
+  return { finalEquity: equity, curve, hitTarget, hitStop, maxWinStreak, maxLossStreak };
 }
 
 export function runMonteCarlo(
@@ -75,13 +125,21 @@ export function runMonteCarlo(
 
   const finalValues: number[] = [];
   const equityCurves: number[][] = [];
+  const maxWinStreaks: number[] = [];
+  const maxLossStreaks: number[] = [];
+  let targetHits = 0;
+  let stopHits = 0;
   const storeEvery = shouldStoreCurves
     ? Math.max(1, Math.floor(params.numSimulations / Math.min(maxCurvesToStore, params.numSimulations)))
     : Number.POSITIVE_INFINITY;
 
   for (let sim = 0; sim < params.numSimulations; sim++) {
-    const { finalEquity, curve } = runSinglePath(params, random);
+    const { finalEquity, curve, hitTarget, hitStop, maxWinStreak, maxLossStreak } = runSinglePath(params, random);
     finalValues.push(finalEquity);
+    maxWinStreaks.push(maxWinStreak);
+    maxLossStreaks.push(maxLossStreak);
+    if (hitTarget) targetHits++;
+    if (hitStop) stopHits++;
 
     if (shouldStoreCurves && sim % storeEvery === 0) {
       equityCurves.push(curve);
@@ -131,6 +189,9 @@ export function runMonteCarlo(
     maxDrawdown,
     sharpeRatio,
     meanReturn,
+    pctHitTarget: params.profitTarget ? targetHits / n : undefined,
+    pctHitStop: params.stopLoss ? stopHits / n : undefined,
+    streaks: { maxWinStreaks, maxLossStreaks },
   };
 }
 

@@ -3,8 +3,10 @@ import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { InputPanel } from "@/components/InputPanel";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
+import { SimulationHistory } from "@/components/dashboard/SimulationHistory";
 import { useSimulation } from "@/hooks/useSimulation";
-import type { SimulationParams } from "@/types/simulation";
+import { useSimulationHistory } from "@/hooks/useSimulationHistory";
+import type { SimulationParams, SimulationResult } from "@/types/simulation";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { decodeParamsFromUrl } from "@/components/dashboard/ShareModal";
@@ -13,9 +15,19 @@ import { Activity, Zap, Shield, BarChart3 } from "lucide-react";
 const Index = () => {
   const { result, isRunning, progress, runSimulation } = useSimulation();
   const [lastParams, setLastParams] = useState<SimulationParams | null>(null);
+  const [comparisonResult, setComparisonResult] = useState<SimulationResult | null>(null);
   const [searchParams] = useSearchParams();
+  const { history, addEntry, clearHistory } = useSimulationHistory();
 
   const sharedParams = searchParams.get("p") ? decodeParamsFromUrl(searchParams.toString()) : null;
+
+  // Save to history when a simulation completes
+  useEffect(() => {
+    if (result && lastParams) {
+      addEntry(lastParams, result);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
   useEffect(() => {
     if (sharedParams && !result && !isRunning) {
@@ -32,6 +44,14 @@ const Index = () => {
     },
     [runSimulation]
   );
+
+  const handleLockComparison = useCallback(() => {
+    if (result) setComparisonResult(result);
+  }, [result]);
+
+  const handleClearComparison = useCallback(() => {
+    setComparisonResult(null);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background terminal-grid">
@@ -86,7 +106,7 @@ const Index = () => {
                     { icon: Activity, label: "50K+ Sims", sub: "per run" },
                     { icon: Shield, label: "Ruin Analysis", sub: "built-in" },
                     { icon: BarChart3, label: "AI Insights", sub: "powered" },
-                  ].map((feat, i) => (
+                  ].map((feat) => (
                     <div key={feat.label} className="flex items-center gap-2 text-left">
                       <div className="p-2 rounded-lg bg-muted/50 border border-border/50">
                         <feat.icon className="h-4 w-4 text-primary" />
@@ -120,10 +140,12 @@ const Index = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
+            className="space-y-3"
           >
             <Card className="p-3 md:p-4 bg-card/70 border-border/60 backdrop-blur">
               <InputPanel onRunSimulation={handleRun} isRunning={isRunning} initialParams={sharedParams} />
             </Card>
+            <SimulationHistory history={history} onRerun={handleRun} onClear={clearHistory} />
           </motion.div>
 
           <motion.div
@@ -137,6 +159,9 @@ const Index = () => {
                 isRunning={isRunning}
                 progress={progress}
                 params={lastParams}
+                comparisonResult={comparisonResult}
+                onLockComparison={handleLockComparison}
+                onClearComparison={handleClearComparison}
               />
             </Card>
           </motion.div>

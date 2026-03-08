@@ -12,9 +12,10 @@ import { RiskMetrics } from "./dashboard/RiskMetrics";
 import { DrawdownChart } from "./dashboard/DrawdownChart";
 import { SensitivityHeatmap } from "./dashboard/SensitivityHeatmap";
 import { EquityReplay } from "./dashboard/EquityReplay";
+import { StreakAnalysis } from "./dashboard/StreakAnalysis";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Activity, Download } from "lucide-react";
+import { Activity, Download, Lock, X } from "lucide-react";
 import { exportResultsToCSV } from "@/lib/csvExport";
 
 interface ResultsDashboardProps {
@@ -22,9 +23,12 @@ interface ResultsDashboardProps {
   isRunning: boolean;
   progress: number;
   params: SimulationParams | null;
+  comparisonResult?: SimulationResult | null;
+  onLockComparison?: () => void;
+  onClearComparison?: () => void;
 }
 
-export function ResultsDashboard({ result, isRunning, progress, params }: ResultsDashboardProps) {
+export function ResultsDashboard({ result, isRunning, progress, params, comparisonResult, onLockComparison, onClearComparison }: ResultsDashboardProps) {
   if (isRunning) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-6">
@@ -81,9 +85,32 @@ export function ResultsDashboard({ result, isRunning, progress, params }: Result
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Results</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Results {comparisonResult ? "(B vs A)" : ""}
+          </span>
         </div>
         <div className="flex items-center gap-2">
+          {comparisonResult ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 font-mono text-[10px] gap-1.5 border-loss/30 text-loss hover:bg-loss/10"
+              onClick={onClearComparison}
+            >
+              <X className="h-3 w-3" />
+              Clear A
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 font-mono text-[10px] gap-1.5 border-primary/30"
+              onClick={onLockComparison}
+            >
+              <Lock className="h-3 w-3" />
+              Lock & Compare
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -97,22 +124,24 @@ export function ResultsDashboard({ result, isRunning, progress, params }: Result
         </div>
       </div>
 
-      <SummaryStats result={result} bankroll={params.bankroll} />
+      <SummaryStats result={result} bankroll={params.bankroll} comparisonResult={comparisonResult} />
 
       <RiskMetrics result={result} bankroll={params.bankroll} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <RuinGauge probability={result.probabilityOfRuin} />
+        <RuinGauge probability={result.probabilityOfRuin} comparisonProbability={comparisonResult?.probabilityOfRuin} />
         <div className="lg:col-span-2">
-          <OutcomeHistogram finalValues={result.finalValues} bankroll={params.bankroll} />
+          <OutcomeHistogram finalValues={result.finalValues} bankroll={params.bankroll} comparisonValues={comparisonResult?.finalValues} />
         </div>
       </div>
 
-      <EquityFanChart equityCurves={result.equityCurves} />
+      <EquityFanChart equityCurves={result.equityCurves} comparisonCurves={comparisonResult?.equityCurves} />
 
       <DrawdownChart equityCurves={result.equityCurves} />
 
       <EquityReplay equityCurves={result.equityCurves} bankroll={params.bankroll} />
+
+      {result.streaks && <StreakAnalysis streaks={result.streaks} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ConfidenceTable result={result} bankroll={params.bankroll} />

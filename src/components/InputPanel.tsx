@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link2, Play, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Link2, Play, Loader2, ToggleLeft, ToggleRight, ChevronDown, Zap, Shield, Flame, Coins, Target, OctagonX } from "lucide-react";
 import type { SimulationParams, MarketInfo, MarketOutcome } from "@/types/simulation";
 import { toast } from "sonner";
 import { scrapeMarketUrl } from "@/lib/marketScraper";
 import { KellyIndicator } from "@/components/input/KellyIndicator";
+import { EdgeCalculator } from "@/components/input/EdgeCalculator";
 import { OutcomeEditor } from "@/components/input/OutcomeEditor";
 
 interface InputPanelProps {
@@ -16,6 +18,13 @@ interface InputPanelProps {
   isRunning: boolean;
   initialParams?: Partial<SimulationParams> | null;
 }
+
+const PRESETS = [
+  { label: "Conservative", icon: Shield, probability: 60, leverage: 1, positionSize: 5, numBets: 100 },
+  { label: "Kelly", icon: Zap, probability: 55, leverage: 1, positionSize: 10, numBets: 100, autoKelly: true },
+  { label: "Aggressive", icon: Flame, probability: 65, leverage: 3, positionSize: 25, numBets: 50 },
+  { label: "Coin Flip", icon: Coins, probability: 50, leverage: 1, positionSize: 10, numBets: 200 },
+];
 
 export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputPanelProps) {
   const [marketUrl, setMarketUrl] = useState("");
@@ -34,6 +43,8 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
     { label: "Win", probability: 0.5, payoutMultiplier: 1 },
     { label: "Lose", probability: 0.5, payoutMultiplier: -1 },
   ]);
+  const [profitTarget, setProfitTarget] = useState<number | null>(null);
+  const [stopLoss, setStopLoss] = useState<number | null>(null);
 
   const handleScrapeUrl = async () => {
     if (!marketUrl.trim()) return;
@@ -53,6 +64,22 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
     } finally {
       setIsScraping(false);
     }
+  };
+
+  const applyPreset = (preset: typeof PRESETS[0]) => {
+    setProbability(preset.probability);
+    setLeverage(preset.leverage);
+    setNumBets(preset.numBets);
+    if (preset.autoKelly) {
+      // Kelly optimal: f* = (bp - q) / b where b = payout ratio, p = prob, q = 1-p
+      const p = preset.probability / 100;
+      const b = (1 - p) / p;
+      const kelly = Math.max(0, (b * p - (1 - p)) / b);
+      setPositionSize(Math.round(Math.min(50, kelly * 100)));
+    } else {
+      setPositionSize(preset.positionSize);
+    }
+    toast.success(`Applied ${preset.label} preset`);
   };
 
   const handleRun = () => {
@@ -75,6 +102,8 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
       marketPlatform: marketInfo?.platform,
       multiOutcome,
       outcomes: multiOutcome ? outcomes : undefined,
+      profitTarget: profitTarget ?? undefined,
+      stopLoss: stopLoss ?? undefined,
     });
   };
 
@@ -149,6 +178,22 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
         </CardContent>
       </Card>
 
+      {/* Scenario Presets */}
+      <div className="grid grid-cols-4 gap-1.5">
+        {PRESETS.map((preset) => (
+          <Button
+            key={preset.label}
+            variant="outline"
+            size="sm"
+            className="h-auto py-1.5 px-1 flex flex-col items-center gap-0.5 font-mono text-[9px] border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+            onClick={() => applyPreset(preset)}
+          >
+            <preset.icon className="h-3.5 w-3.5 text-primary" />
+            {preset.label}
+          </Button>
+        ))}
+      </div>
+
       {/* Parameters */}
       <Card className="border-border/50 bg-card/80 backdrop-blur">
         <CardHeader className="pb-2 pt-3 px-4">
@@ -194,6 +239,15 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
             currentPositionSize={positionSize / 100}
           />
 
+          {/* Edge Calculator */}
+          {!multiOutcome && (
+            <EdgeCalculator
+              probability={probability / 100}
+              leverage={leverage}
+              positionSize={positionSize / 100}
+            />
+          )}
+
           {/* Simulations */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -237,6 +291,75 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
           </div>
         </CardContent>
       </Card>
+
+      {/* Risk Controls */}
+      <Collapsible>
+        <Card className="border-border/50 bg-card/80 backdrop-blur">
+          <CollapsibleTrigger asChild>
+            <CardHeader className="pb-2 pt-3 px-4 cursor-pointer hover:bg-muted/20 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                  Risk Controls
+                </CardTitle>
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-4 px-4 pb-4">
+              {/* Profit Target */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="h-3 w-3 text-profit" />
+                    <Label className="text-[10px] font-mono text-muted-foreground">PROFIT TARGET</Label>
+                  </div>
+                  <button
+                    className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                    onClick={() => setProfitTarget(profitTarget ? null : 2)}
+                  >
+                    {profitTarget ? `${profitTarget}x` : "OFF"}
+                  </button>
+                </div>
+                {profitTarget !== null && (
+                  <Slider
+                    value={[profitTarget]}
+                    onValueChange={([v]) => setProfitTarget(v)}
+                    min={1.2}
+                    max={10}
+                    step={0.1}
+                  />
+                )}
+              </div>
+
+              {/* Stop Loss */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <OctagonX className="h-3 w-3 text-loss" />
+                    <Label className="text-[10px] font-mono text-muted-foreground">STOP LOSS</Label>
+                  </div>
+                  <button
+                    className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                    onClick={() => setStopLoss(stopLoss ? null : 0.5)}
+                  >
+                    {stopLoss ? `${(stopLoss * 100).toFixed(0)}%` : "OFF"}
+                  </button>
+                </div>
+                {stopLoss !== null && (
+                  <Slider
+                    value={[stopLoss]}
+                    onValueChange={([v]) => setStopLoss(v)}
+                    min={0.05}
+                    max={0.95}
+                    step={0.05}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Run Button */}
       <Button
