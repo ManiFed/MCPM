@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { scrapeMarketUrl } from "@/lib/marketScraper";
 import { KellyIndicator } from "@/components/input/KellyIndicator";
 import { EdgeCalculator } from "@/components/input/EdgeCalculator";
+import { BetSizeOptimizer } from "@/components/input/BetSizeOptimizer";
 import { OutcomeEditor } from "@/components/input/OutcomeEditor";
 
 interface InputPanelProps {
@@ -360,6 +361,20 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      {/* Bet Size Optimizer */}
+      {!multiOutcome && (
+        <BetSizeOptimizer
+          probability={probability / 100}
+          leverage={leverage}
+          bankroll={bankroll}
+          numBets={numBets}
+          onApply={(size) => {
+            setPositionSize(Math.round(size * 100));
+            toast.success(`Applied ${(size * 100).toFixed(1)}% position size`);
+          }}
+        />
+      )}
 
       {/* Run Button */}
       <Button

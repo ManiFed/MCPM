@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Play, Loader2 } from "lucide-react";
 import { MarketList } from "@/components/portfolio/MarketList";
+import { CorrelationMatrix } from "@/components/portfolio/CorrelationMatrix";
 import { PortfolioResults } from "@/components/portfolio/PortfolioResults";
 import type { MarketConfig, PortfolioResult } from "@/lib/portfolioMath";
 import { runPortfolioMonteCarlo } from "@/lib/portfolioMath";
@@ -16,6 +17,7 @@ const Portfolio = () => {
     { id: crypto.randomUUID(), name: "Market 1", probability: 0.6, leverage: 2, positionSize: 0.1 },
     { id: crypto.randomUUID(), name: "Market 2", probability: 0.45, leverage: 1.5, positionSize: 0.08 },
   ]);
+  const [correlations, setCorrelations] = useState<Record<string, number>>({});
   const [bankroll, setBankroll] = useState(10000);
   const [numSims, setNumSims] = useState(10000);
   const [numBets, setNumBets] = useState(100);
@@ -25,13 +27,12 @@ const Portfolio = () => {
   const handleRun = useCallback(() => {
     setIsRunning(true);
     setResult(null);
-    // Use setTimeout to allow UI to update
     setTimeout(() => {
-      const res = runPortfolioMonteCarlo(markets, bankroll, numSims, numBets);
+      const res = runPortfolioMonteCarlo(markets, bankroll, numSims, numBets, correlations);
       setResult(res);
       setIsRunning(false);
     }, 50);
-  }, [markets, bankroll, numSims, numBets]);
+  }, [markets, bankroll, numSims, numBets, correlations]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,7 +41,7 @@ const Portfolio = () => {
         <div className="mb-4">
           <h2 className="font-mono text-sm text-foreground">Portfolio Mode</h2>
           <p className="text-xs text-muted-foreground">
-            Simulate multiple prediction markets simultaneously to see combined risk and diversification benefits.
+            Simulate multiple prediction markets with optional correlations to model diversification and combined risk.
           </p>
         </div>
 
@@ -48,6 +49,12 @@ const Portfolio = () => {
           <Card className="p-3 md:p-4 bg-card/70 border-border/60">
             <div className="space-y-3">
               <MarketList markets={markets} onChange={setMarkets} />
+
+              <CorrelationMatrix
+                markets={markets}
+                correlations={correlations}
+                onChange={setCorrelations}
+              />
 
               <Card className="border-border/50 bg-card/80 backdrop-blur p-4">
                 <div className="space-y-4">
