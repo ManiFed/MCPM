@@ -1,9 +1,11 @@
+import { choleskyDecomposition, correlatedUniformDraws, buildCorrelationMatrix } from './correlationMath';
+
 export interface MarketConfig {
   id: string;
   name: string;
   probability: number;
   leverage: number;
-  positionSize: number; // fraction of bankroll allocated to this market
+  positionSize: number;
 }
 
 export interface PortfolioResult {
@@ -15,15 +17,26 @@ export interface PortfolioResult {
   maxDrawdown: number;
   sharpeRatio: number;
   meanReturn: number;
-  perMarketRuin: Record<string, number>; // individual ruin if only that market
+  perMarketRuin: Record<string, number>;
 }
 
 export function runPortfolioMonteCarlo(
   markets: MarketConfig[],
   bankroll: number,
   numSimulations: number,
-  numBets: number
+  numBets: number,
+  correlations?: Record<string, number>
 ): PortfolioResult {
+  const n = markets.length;
+  const hasCorrelation = correlations && Object.values(correlations).some(v => v !== 0);
+
+  // Build Cholesky factor if correlations present
+  let L: number[][] | null = null;
+  if (hasCorrelation && n >= 2) {
+    const corrMatrix = buildCorrelationMatrix(n, correlations!);
+    L = choleskyDecomposition(corrMatrix);
+  }
+
   const finalValues: number[] = [];
   const equityCurves: number[][] = [];
   const maxCurves = 200;
@@ -36,13 +49,22 @@ export function runPortfolioMonteCarlo(
     for (let bet = 0; bet < numBets; bet++) {
       if (equity <= 0) { curve.push(0); continue; }
 
+      // Generate draws - correlated or independent
+      let rolls: number[];
+      if (L) {
+        rolls = correlatedUniformDraws(L);
+      } else {
+        rolls = markets.map(() => Math.random());
+      }
+
       let totalPnl = 0;
-      for (const m of markets) {
+      for (let mi = 0; mi < markets.length; mi++) {
+        const m = markets[mi];
         const notional = equity * Math.min(m.positionSize, 1) * m.leverage;
         const riskAmount = Math.min(notional, equity);
         const payoutRatio = (1 - m.probability) / m.probability;
 
-        if (Math.random() < m.probability) {
+        if (rolls[mi] < m.probability) {
           totalPnl += riskAmount * payoutRatio;
         } else {
           totalPnl -= riskAmount;
@@ -58,10 +80,10 @@ export function runPortfolioMonteCarlo(
   }
 
   const sorted = [...finalValues].sort((a, b) => a - b);
-  const n = sorted.length;
-  const expectedValue = finalValues.reduce((s, v) => s + v, 0) / n;
-  const medianOutcome = sorted[Math.floor(n / 2)];
-  const probabilityOfRuin = finalValues.filter(v => v <= 0).length / n;
+  const nv = sorted.length;
+  const expectedValue = finalValues.reduce((s, v) => s + v, 0) / nv;
+  const medianOutcome = sorted[Math.floor(nv / 2)];
+  const probabilityOfRuin = finalValues.filter(v => v <= 0).length / nv;
 
   let maxDrawdown = 0;
   for (const curve of equityCurves) {
@@ -74,11 +96,10 @@ export function runPortfolioMonteCarlo(
   }
 
   const returns = finalValues.map(v => (v - bankroll) / bankroll);
-  const meanReturn = returns.reduce((s, v) => s + v, 0) / n;
-  const variance = returns.reduce((s, v) => s + (v - meanReturn) ** 2, 0) / n;
+  const meanReturn = returns.reduce((s, v) => s + v, 0) / nv;
+  const variance = returns.reduce((s, v) => s + (v - meanReturn) ** 2, 0) / nv;
   const sharpeRatio = variance > 0 ? meanReturn / Math.sqrt(variance) : 0;
 
-  // Per-market solo ruin (quick estimate with fewer sims)
   const soloSims = Math.min(2000, numSimulations);
   const perMarketRuin: Record<string, number> = {};
   for (const m of markets) {

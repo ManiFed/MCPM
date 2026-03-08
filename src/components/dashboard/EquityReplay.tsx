@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, Zap } from "lucide-react";
+import { Play, Pause, RotateCcw, Zap, SkipForward, Volume2, VolumeX } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts";
 
 interface EquityReplayProps {
@@ -9,19 +9,45 @@ interface EquityReplayProps {
   bankroll: number;
 }
 
-const SPEEDS = [1, 2, 5, 10];
+const SPEEDS = [0.5, 1, 2, 4, 10];
 
 export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
   const [curveIndex] = useState(() => Math.floor(Math.random() * equityCurves.length));
   const curve = equityCurves[curveIndex] ?? [];
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [speedIdx, setSpeedIdx] = useState(0);
+  const [speedIdx, setSpeedIdx] = useState(1);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef(0);
+  const prevEquityRef = useRef(bankroll);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const speed = SPEEDS[speedIdx];
-  const interval = 60 / speed; // ms per step
+  const interval = 60 / speed;
+
+  // Track streaks for display
+  const [currentStreak, setCurrentStreak] = useState({ type: "none" as "win" | "loss" | "none", count: 0 });
+
+  const playTick = useCallback((won: boolean) => {
+    if (!soundEnabled) return;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = won ? 880 : 220;
+      osc.type = won ? "sine" : "triangle";
+      gain.gain.value = 0.05;
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    } catch {}
+  }, [soundEnabled]);
 
   const animate = useCallback(
     (time: number) => {
@@ -32,12 +58,25 @@ export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
             setPlaying(false);
             return s;
           }
-          return s + 1;
+          const next = s + 1;
+          const prevEq = curve[s] ?? bankroll;
+          const nextEq = curve[next] ?? bankroll;
+          const won = nextEq > prevEq;
+          playTick(won);
+
+          setCurrentStreak(prev => {
+            const newType = won ? "win" : "loss";
+            if (prev.type === newType) return { type: newType, count: prev.count + 1 };
+            return { type: newType, count: 1 };
+          });
+
+          prevEquityRef.current = nextEq;
+          return next;
         });
       }
       rafRef.current = requestAnimationFrame(animate);
     },
-    [curve.length, interval]
+    [curve.length, interval, playTick, bankroll, curve]
   );
 
   useEffect(() => {
@@ -47,6 +86,21 @@ export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
     }
     return () => cancelAnimationFrame(rafRef.current);
   }, [playing, animate]);
+
+  const stepForward = useCallback(() => {
+    setStep(s => {
+      if (s >= curve.length - 1) return s;
+      const next = s + 1;
+      const won = (curve[next] ?? 0) > (curve[s] ?? 0);
+      playTick(won);
+      setCurrentStreak(prev => {
+        const newType = won ? "win" : "loss";
+        if (prev.type === newType) return { type: newType, count: prev.count + 1 };
+        return { type: newType, count: 1 };
+      });
+      return next;
+    });
+  }, [curve, playTick]);
 
   const data = curve.slice(0, step + 1).map((v, i) => ({ step: i, equity: v }));
   const currentEquity = curve[step] ?? bankroll;
@@ -66,7 +120,15 @@ export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
             <Zap className="h-3.5 w-3.5 text-accent" />
             Equity Path Replay
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+            >
+              {soundEnabled ? <Volume2 className="h-3 w-3 text-primary" /> : <VolumeX className="h-3 w-3 text-muted-foreground" />}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -79,7 +141,16 @@ export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={() => { setStep(0); setPlaying(false); }}
+              onClick={stepForward}
+              disabled={playing}
+            >
+              <SkipForward className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => { setStep(0); setPlaying(false); setCurrentStreak({ type: "none", count: 0 }); }}
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </Button>
@@ -96,7 +167,7 @@ export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
         </div>
       </CardHeader>
       <CardContent className="pb-4">
-        <div className="flex items-center gap-4 mb-3">
+        <div className="flex items-center gap-4 mb-3 flex-wrap">
           <div className="font-mono text-xs text-muted-foreground">
             Bet <span className="text-foreground font-semibold">{step}</span>/{curve.length - 1}
           </div>
@@ -106,6 +177,13 @@ export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
           <div className={`font-mono text-xs font-semibold ${pnl >= 0 ? "text-profit" : "text-loss"}`}>
             {pnl >= 0 ? "+" : ""}{formatValue(pnl)} ({pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(1)}%)
           </div>
+          {currentStreak.type !== "none" && currentStreak.count > 1 && (
+            <div className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${
+              currentStreak.type === "win" ? "bg-profit/10 text-profit" : "bg-loss/10 text-loss"
+            }`}>
+              {currentStreak.count}× {currentStreak.type === "win" ? "W" : "L"} streak
+            </div>
+          )}
         </div>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={data}>
@@ -133,7 +211,6 @@ export function EquityReplay({ equityCurves, bankroll }: EquityReplayProps) {
             />
           </LineChart>
         </ResponsiveContainer>
-        {/* Progress bar */}
         <div className="w-full h-1 bg-muted rounded-full mt-2 overflow-hidden">
           <div
             className="h-full bg-primary rounded-full transition-all duration-75"

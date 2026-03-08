@@ -362,6 +362,20 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
         </Card>
       </Collapsible>
 
+      {/* Bet Size Optimizer */}
+      {!multiOutcome && (
+        <BetSizeOptimizer
+          probability={probability / 100}
+          leverage={leverage}
+          bankroll={bankroll}
+          numBets={numBets}
+          onApply={(size) => {
+            setPositionSize(Math.round(size * 100));
+            toast.success(`Applied ${(size * 100).toFixed(1)}% position size`);
+          }}
+        />
+      )}
+
       {/* Run Button */}
       <Button
         onClick={handleRun}
