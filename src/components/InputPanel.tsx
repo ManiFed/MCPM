@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link2, Play, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import type { SimulationParams, MarketInfo, MarketOutcome } from "@/types/simulation";
 import { toast } from "sonner";
-import { apiUrl } from "@/lib/api";
+import { scrapeMarketUrl } from "@/lib/marketScraper";
 import { KellyIndicator } from "@/components/input/KellyIndicator";
 import { OutcomeEditor } from "@/components/input/OutcomeEditor";
 
@@ -39,25 +39,15 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
     if (!marketUrl.trim()) return;
     setIsScraping(true);
     try {
-      const response = await fetch(apiUrl("/api/firecrawl-scrape"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: marketUrl.trim() }),
+      const data = await scrapeMarketUrl(marketUrl.trim());
+      setProbability(Math.round(data.probability * 100));
+      setMarketInfo({
+        title: data.title || "Unknown Market",
+        probability: data.probability,
+        platform: data.platform || "Unknown",
+        url: marketUrl.trim(),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to scrape URL");
-      if (data?.probability != null) {
-        setProbability(Math.round(data.probability * 100));
-        setMarketInfo({
-          title: data.title || "Unknown Market",
-          probability: data.probability,
-          platform: data.platform || "Unknown",
-          url: marketUrl.trim(),
-        });
-        toast.success(`Extracted ${Math.round(data.probability * 100)}% from ${data.platform || "market"}`);
-      } else {
-        toast.error("Could not extract probability from that URL");
-      }
+      toast.success(`Extracted ${Math.round(data.probability * 100)}% from ${data.platform || "market"}`);
     } catch (e: any) {
       toast.error(e.message || "Failed to scrape URL");
     } finally {
