@@ -1,4 +1,4 @@
-import type { LeveragePoint, SimulationParams } from "@/types/simulation";
+import type { LeveragePoint, MarketOutcome, SimulationParams } from "@/types/simulation";
 
 interface RunOptions {
   random?: () => number;
@@ -22,9 +22,19 @@ export interface MonteCarloResult {
 
 const DEFAULT_LEVERAGE_LEVELS = [1, 2, 3, 5, 7, 10];
 
+function resolveOutcome(outcomes: MarketOutcome[], roll: number): number {
+  let cumulative = 0;
+  for (const o of outcomes) {
+    cumulative += o.probability;
+    if (roll < cumulative) return o.payoutMultiplier;
+  }
+  return outcomes[outcomes.length - 1].payoutMultiplier;
+}
+
 function runSinglePath(params: SimulationParams, random: () => number): { finalEquity: number; curve: number[] } {
   let equity = params.bankroll;
   const curve = [equity];
+  const isMulti = params.multiOutcome && params.outcomes && params.outcomes.length >= 2;
 
   for (let bet = 0; bet < params.numBets; bet++) {
     if (equity <= 0) {
@@ -34,12 +44,18 @@ function runSinglePath(params: SimulationParams, random: () => number): { finalE
 
     const notionalFraction = params.positionSize * params.leverage;
     const riskAmount = equity * Math.min(1, notionalFraction);
+    const roll = random();
 
-    if (random() < params.probability) {
-      const payoutRatio = (1 - params.probability) / params.probability;
-      equity += riskAmount * payoutRatio;
+    if (isMulti) {
+      const multiplier = resolveOutcome(params.outcomes!, roll);
+      equity += riskAmount * multiplier;
     } else {
-      equity -= riskAmount;
+      if (roll < params.probability) {
+        const payoutRatio = (1 - params.probability) / params.probability;
+        equity += riskAmount * payoutRatio;
+      } else {
+        equity -= riskAmount;
+      }
     }
 
     if (equity < 0) equity = 0;

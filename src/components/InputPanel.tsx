@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link2, Play, Loader2 } from "lucide-react";
-import type { SimulationParams, MarketInfo } from "@/types/simulation";
+import { Link2, Play, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import type { SimulationParams, MarketInfo, MarketOutcome } from "@/types/simulation";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api";
 import { KellyIndicator } from "@/components/input/KellyIndicator";
+import { OutcomeEditor } from "@/components/input/OutcomeEditor";
 
 interface InputPanelProps {
   onRunSimulation: (params: SimulationParams) => void;
@@ -28,6 +29,11 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
     initialParams?.marketTitle ? { title: initialParams.marketTitle, probability: initialParams.probability ?? 0.5, platform: initialParams.marketPlatform ?? "", url: "" } : null
   );
   const [isScraping, setIsScraping] = useState(false);
+  const [multiOutcome, setMultiOutcome] = useState(false);
+  const [outcomes, setOutcomes] = useState<MarketOutcome[]>([
+    { label: "Win", probability: 0.5, payoutMultiplier: 1 },
+    { label: "Lose", probability: 0.5, payoutMultiplier: -1 },
+  ]);
 
   const handleScrapeUrl = async () => {
     if (!marketUrl.trim()) return;
@@ -60,6 +66,13 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
   };
 
   const handleRun = () => {
+    if (multiOutcome) {
+      const totalProb = outcomes.reduce((s, o) => s + o.probability, 0);
+      if (Math.abs(totalProb - 1) > 0.02) {
+        toast.error("Outcome probabilities must sum to ~100%");
+        return;
+      }
+    }
     onRunSimulation({
       probability: probability / 100,
       leverage,
@@ -70,6 +83,8 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
       marketTitle: marketInfo?.title,
       marketUrl: marketInfo?.url,
       marketPlatform: marketInfo?.platform,
+      multiOutcome,
+      outcomes: multiOutcome ? outcomes : undefined,
     });
   };
 
@@ -108,19 +123,39 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
             </div>
           )}
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <Label className="text-[10px] font-mono text-muted-foreground">PROBABILITY</Label>
-              <span className="font-mono text-sm font-bold text-primary">{probability}%</span>
-            </div>
-            <Slider
-              value={[probability]}
-              onValueChange={([v]) => setProbability(v)}
-              min={1}
-              max={99}
-              step={1}
-            />
+          {/* Mode Toggle */}
+          <div className="flex items-center justify-between">
+            <Label className="text-[10px] font-mono text-muted-foreground">MODE</Label>
+            <button
+              type="button"
+              onClick={() => setMultiOutcome(!multiOutcome)}
+              className="flex items-center gap-1.5 font-mono text-[10px] text-primary hover:text-primary/80 transition-colors"
+            >
+              {multiOutcome ? (
+                <><ToggleRight className="h-4 w-4" /> Multi-Outcome</>
+              ) : (
+                <><ToggleLeft className="h-4 w-4 text-muted-foreground" /> Binary</>
+              )}
+            </button>
           </div>
+
+          {multiOutcome ? (
+            <OutcomeEditor outcomes={outcomes} onChange={setOutcomes} />
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-[10px] font-mono text-muted-foreground">PROBABILITY</Label>
+                <span className="font-mono text-sm font-bold text-primary">{probability}%</span>
+              </div>
+              <Slider
+                value={[probability]}
+                onValueChange={([v]) => setProbability(v)}
+                min={1}
+                max={99}
+                step={1}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

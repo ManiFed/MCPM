@@ -1,5 +1,11 @@
-export interface SimulationParams {
+export interface MarketOutcome {
+  label: string;
   probability: number; // 0-1
+  payoutMultiplier: number; // net: e.g. +2.0 means gain 2x risk, -1 means lose risk
+}
+
+export interface SimulationParams {
+  probability: number; // 0-1 (used in binary mode)
   leverage: number; // 1-10
   positionSize: number; // 0.01-0.50, fraction of bankroll per bet
   numSimulations: number;
@@ -8,6 +14,8 @@ export interface SimulationParams {
   marketTitle?: string;
   marketUrl?: string;
   marketPlatform?: string;
+  multiOutcome?: boolean;
+  outcomes?: MarketOutcome[];
 }
 
 export interface LeveragePoint {
