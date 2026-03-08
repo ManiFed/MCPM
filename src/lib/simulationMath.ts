@@ -1,4 +1,4 @@
-import type { LeveragePoint, SimulationParams } from "@/types/simulation";
+import type { LeveragePoint, MarketOutcome, SimulationParams } from "@/types/simulation";
 
 interface RunOptions {
   random?: () => number;
