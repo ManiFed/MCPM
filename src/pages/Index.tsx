@@ -153,7 +153,7 @@ const Index = () => {
             <Card className="p-3 md:p-4 bg-card/70 border-border/60 backdrop-blur">
               <InputPanel ref={inputPanelRef} onRunSimulation={handleRun} isRunning={isRunning} initialParams={effectiveInitialParams} />
             </Card>
-            <SimulationHistory history={history} onRerun={handleRun} onClear={clearHistory} />
+            <SimulationHistory history={history} onRerun={handleRun} onClear={clearHistory} onUpdateNotes={updateNotes} />
           </motion.div>
 
           <motion.div
