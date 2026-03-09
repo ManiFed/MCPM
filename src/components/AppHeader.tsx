@@ -54,7 +54,7 @@ export function AppHeader() {
           whileTap={{ scale: 0.95 }}>
           
           <Activity className="h-4.5 w-4.5 text-primary" />
-          <div className="absolute inset-0 rounded-lg bg-primary/10 animate-ping opacity-30" />
+          
         </motion.div>
 
         <div>
