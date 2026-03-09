@@ -48,14 +48,14 @@ export function AppHeader() {
           </SheetContent>
         </Sheet>
 
-        <motion.div
-          className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 border border-primary/30"
-          whileHover={{ scale: 1.1, rotate: 5 }}
-          whileTap={{ scale: 0.95 }}>
-          
-          <Activity className="h-4.5 w-4.5 text-primary" />
-          
-        </motion.div>
+        
+
+
+
+
+
+
+        
 
         <div>
           <div className="flex items-center gap-1.5">
