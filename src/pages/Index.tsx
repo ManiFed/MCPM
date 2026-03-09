@@ -16,7 +16,7 @@ const Index = () => {
   const [lastParams, setLastParams] = useState<SimulationParams | null>(null);
   const [comparisonResult, setComparisonResult] = useState<SimulationResult | null>(null);
   const [searchParams] = useSearchParams();
-  const { history, addEntry, clearHistory } = useSimulationHistory();
+  const { history, addEntry, updateNotes, clearHistory } = useSimulationHistory();
   const inputPanelRef = useRef<{ applyPreset: (index: number) => void; run: () => void } | null>(null);
 
   const sharedParams = searchParams.get("p") ? decodeParamsFromUrl(searchParams.toString()) : null;
