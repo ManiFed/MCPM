@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { motion } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Link2, Play, Loader2, ToggleLeft, ToggleRight, ChevronDown, Zap, Shield, Flame, Coins, Target, OctagonX } from "lucide-react";
+import { Link2, Play, Loader2, ToggleLeft, ToggleRight, ChevronDown, Zap, Shield, Flame, Coins, Target, OctagonX, TrendingUp, TrendingDown } from "lucide-react";
 import type { SimulationParams, MarketInfo, MarketOutcome } from "@/types/simulation";
 import { toast } from "sonner";
 import { scrapeMarketUrl } from "@/lib/marketScraper";
@@ -14,6 +14,7 @@ import { KellyIndicator } from "@/components/input/KellyIndicator";
 import { EdgeCalculator } from "@/components/input/EdgeCalculator";
 import { BetSizeOptimizer } from "@/components/input/BetSizeOptimizer";
 import { OutcomeEditor } from "@/components/input/OutcomeEditor";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InputPanelProps {
   onRunSimulation: (params: SimulationParams) => void;
@@ -28,7 +29,10 @@ const PRESETS = [
   { label: "Coin Flip", icon: Coins, probability: 50, leverage: 1, positionSize: 10, numBets: 200 },
 ];
 
-export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputPanelProps) {
+export const InputPanel = forwardRef<
+  { applyPreset: (index: number) => void; run: () => void },
+  InputPanelProps
+>(function InputPanel({ onRunSimulation, isRunning, initialParams }, ref) {
   const [marketUrl, setMarketUrl] = useState("");
   const [probability, setProbability] = useState(initialParams?.probability ? Math.round(initialParams.probability * 100) : 50);
   const [leverage, setLeverage] = useState(initialParams?.leverage ?? 2);
@@ -47,6 +51,36 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
   ]);
   const [profitTarget, setProfitTarget] = useState<number | null>(null);
   const [stopLoss, setStopLoss] = useState<number | null>(null);
+
+  // Real-time probability tracker
+  const [liveProbDelta, setLiveProbDelta] = useState<number | null>(null);
+  const [initialProb, setInitialProb] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (marketInfo?.url && marketInfo.probability) {
+      setInitialProb(marketInfo.probability);
+      setLiveProbDelta(null);
+
+      const interval = setInterval(async () => {
+        try {
+          const { data } = await supabase.functions.invoke("scrape-market", {
+            body: { url: marketInfo.url },
+          });
+          if (data?.probability && initialProb !== null) {
+            const delta = data.probability - initialProb;
+            setLiveProbDelta(delta);
+          }
+        } catch {
+          // silently fail polling
+        }
+      }, 60000);
+
+      return () => clearInterval(interval);
+    } else {
+      setLiveProbDelta(null);
+      setInitialProb(null);
+    }
+  }, [marketInfo?.url]);
 
   const handleScrapeUrl = async () => {
     if (!marketUrl.trim()) return;
@@ -68,12 +102,11 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
     }
   };
 
-  const applyPreset = (preset: typeof PRESETS[0]) => {
+  const applyPreset = useCallback((preset: typeof PRESETS[0]) => {
     setProbability(preset.probability);
     setLeverage(preset.leverage);
     setNumBets(preset.numBets);
     if (preset.autoKelly) {
-      // Kelly optimal: f* = (bp - q) / b where b = payout ratio, p = prob, q = 1-p
       const p = preset.probability / 100;
       const b = (1 - p) / p;
       const kelly = Math.max(0, (b * p - (1 - p)) / b);
@@ -82,9 +115,9 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
       setPositionSize(preset.positionSize);
     }
     toast.success(`Applied ${preset.label} preset`);
-  };
+  }, []);
 
-  const handleRun = () => {
+  const handleRun = useCallback(() => {
     if (multiOutcome) {
       const totalProb = outcomes.reduce((s, o) => s + o.probability, 0);
       if (Math.abs(totalProb - 1) > 0.02) {
@@ -107,7 +140,16 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
       profitTarget: profitTarget ?? undefined,
       stopLoss: stopLoss ?? undefined,
     });
-  };
+  }, [probability, leverage, positionSize, numSimulations, bankroll, numBets, marketInfo, multiOutcome, outcomes, profitTarget, stopLoss, onRunSimulation]);
+
+  useImperativeHandle(ref, () => ({
+    applyPreset: (index: number) => {
+      if (PRESETS[index]) applyPreset(PRESETS[index]);
+    },
+    run: () => {
+      if (!isRunning) handleRun();
+    },
+  }), [applyPreset, handleRun, isRunning]);
 
   return (
     <div className="space-y-3">
@@ -139,7 +181,15 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
 
           {marketInfo && (
             <div className="rounded border border-primary/20 bg-primary/5 p-2.5">
-              <p className="text-[10px] font-mono text-primary">{marketInfo.platform}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-mono text-primary">{marketInfo.platform}</p>
+                {liveProbDelta !== null && liveProbDelta !== 0 && (
+                  <span className={`inline-flex items-center gap-0.5 text-[10px] font-mono font-bold ${liveProbDelta > 0 ? "text-profit" : "text-loss"}`}>
+                    {liveProbDelta > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {liveProbDelta > 0 ? "+" : ""}{(liveProbDelta * 100).toFixed(1)}% since loaded
+                  </span>
+                )}
+              </div>
               <p className="text-xs mt-0.5 text-card-foreground">{marketInfo.title}</p>
             </div>
           )}
@@ -182,7 +232,7 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
 
       {/* Scenario Presets */}
       <div className="grid grid-cols-4 gap-1.5">
-        {PRESETS.map((preset) => (
+        {PRESETS.map((preset, i) => (
           <Button
             key={preset.label}
             variant="outline"
@@ -191,7 +241,8 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
             onClick={() => applyPreset(preset)}
           >
             <preset.icon className="h-3.5 w-3.5 text-primary" />
-            {preset.label}
+            <span>{preset.label}</span>
+            <kbd className="text-[8px] text-muted-foreground/50">{i + 1}</kbd>
           </Button>
         ))}
       </div>
@@ -204,53 +255,28 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 px-4 pb-4">
-          {/* Leverage */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-[10px] font-mono text-muted-foreground">LEVERAGE</Label>
               <span className="font-mono text-sm font-bold text-accent">{leverage}x</span>
             </div>
-            <Slider
-              value={[leverage]}
-              onValueChange={([v]) => setLeverage(v)}
-              min={1}
-              max={10}
-              step={0.5}
-            />
+            <Slider value={[leverage]} onValueChange={([v]) => setLeverage(v)} min={1} max={10} step={0.5} />
           </div>
 
-          {/* Position Size */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-[10px] font-mono text-muted-foreground">POSITION SIZE</Label>
               <span className="font-mono text-sm font-bold text-accent">{positionSize}%</span>
             </div>
-            <Slider
-              value={[positionSize]}
-              onValueChange={([v]) => setPositionSize(v)}
-              min={1}
-              max={50}
-              step={1}
-            />
+            <Slider value={[positionSize]} onValueChange={([v]) => setPositionSize(v)} min={1} max={50} step={1} />
           </div>
 
-          {/* Kelly Criterion Indicator */}
-          <KellyIndicator
-            probability={probability / 100}
-            leverage={leverage}
-            currentPositionSize={positionSize / 100}
-          />
+          <KellyIndicator probability={probability / 100} leverage={leverage} currentPositionSize={positionSize / 100} />
 
-          {/* Edge Calculator */}
           {!multiOutcome && (
-            <EdgeCalculator
-              probability={probability / 100}
-              leverage={leverage}
-              positionSize={positionSize / 100}
-            />
+            <EdgeCalculator probability={probability / 100} leverage={leverage} positionSize={positionSize / 100} />
           )}
 
-          {/* Simulations */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-[10px] font-mono text-muted-foreground">SIMULATIONS</Label>
@@ -258,37 +284,17 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
                 {numSimulations >= 1000 ? `${numSimulations / 1000}K` : numSimulations}
               </span>
             </div>
-            <Slider
-              value={[numSimulations]}
-              onValueChange={([v]) => setNumSimulations(v)}
-              min={1000}
-              max={50000}
-              step={1000}
-            />
+            <Slider value={[numSimulations]} onValueChange={([v]) => setNumSimulations(v)} min={1000} max={50000} step={1000} />
           </div>
 
-          {/* Bankroll & Bets */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-[10px] font-mono text-muted-foreground">BANKROLL ($)</Label>
-              <Input
-                type="number"
-                value={bankroll}
-                onChange={(e) => setBankroll(Number(e.target.value))}
-                className="mt-1 font-mono text-xs bg-background/50 h-8"
-                min={100}
-              />
+              <Input type="number" value={bankroll} onChange={(e) => setBankroll(Number(e.target.value))} className="mt-1 font-mono text-xs bg-background/50 h-8" min={100} />
             </div>
             <div>
               <Label className="text-[10px] font-mono text-muted-foreground">BETS / RUN</Label>
-              <Input
-                type="number"
-                value={numBets}
-                onChange={(e) => setNumBets(Number(e.target.value))}
-                className="mt-1 font-mono text-xs bg-background/50 h-8"
-                min={10}
-                max={1000}
-              />
+              <Input type="number" value={numBets} onChange={(e) => setNumBets(Number(e.target.value))} className="mt-1 font-mono text-xs bg-background/50 h-8" min={10} max={1000} />
             </div>
           </div>
         </CardContent>
@@ -300,62 +306,39 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
           <CollapsibleTrigger asChild>
             <CardHeader className="pb-2 pt-3 px-4 cursor-pointer hover:bg-muted/20 transition-colors">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                  Risk Controls
-                </CardTitle>
+                <CardTitle className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Risk Controls</CardTitle>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="space-y-4 px-4 pb-4">
-              {/* Profit Target */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <Target className="h-3 w-3 text-profit" />
                     <Label className="text-[10px] font-mono text-muted-foreground">PROFIT TARGET</Label>
                   </div>
-                  <button
-                    className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                    onClick={() => setProfitTarget(profitTarget ? null : 2)}
-                  >
+                  <button className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors" onClick={() => setProfitTarget(profitTarget ? null : 2)}>
                     {profitTarget ? `${profitTarget}x` : "OFF"}
                   </button>
                 </div>
                 {profitTarget !== null && (
-                  <Slider
-                    value={[profitTarget]}
-                    onValueChange={([v]) => setProfitTarget(v)}
-                    min={1.2}
-                    max={10}
-                    step={0.1}
-                  />
+                  <Slider value={[profitTarget]} onValueChange={([v]) => setProfitTarget(v)} min={1.2} max={10} step={0.1} />
                 )}
               </div>
-
-              {/* Stop Loss */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <OctagonX className="h-3 w-3 text-loss" />
                     <Label className="text-[10px] font-mono text-muted-foreground">STOP LOSS</Label>
                   </div>
-                  <button
-                    className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                    onClick={() => setStopLoss(stopLoss ? null : 0.5)}
-                  >
+                  <button className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors" onClick={() => setStopLoss(stopLoss ? null : 0.5)}>
                     {stopLoss ? `${(stopLoss * 100).toFixed(0)}%` : "OFF"}
                   </button>
                 </div>
                 {stopLoss !== null && (
-                  <Slider
-                    value={[stopLoss]}
-                    onValueChange={([v]) => setStopLoss(v)}
-                    min={0.05}
-                    max={0.95}
-                    step={0.05}
-                  />
+                  <Slider value={[stopLoss]} onValueChange={([v]) => setStopLoss(v)} min={0.05} max={0.95} step={0.05} />
                 )}
               </div>
             </CardContent>
@@ -363,7 +346,6 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
         </Card>
       </Collapsible>
 
-      {/* Bet Size Optimizer */}
       {!multiOutcome && (
         <BetSizeOptimizer
           probability={probability / 100}
@@ -379,13 +361,7 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
 
       {/* Run Button */}
       <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-        <Button
-          onClick={handleRun}
-          disabled={isRunning}
-          className="w-full h-11 font-mono text-xs uppercase tracking-widest glow-green relative overflow-hidden group"
-          size="lg"
-        >
-          {/* Animated shimmer */}
+        <Button onClick={handleRun} disabled={isRunning} className="w-full h-11 font-mono text-xs uppercase tracking-widest glow-green relative overflow-hidden group" size="lg">
           {!isRunning && (
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-transparent via-primary-foreground/10 to-transparent -skew-x-12"
@@ -402,10 +378,11 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
             <>
               <Play className="h-3.5 w-3.5 group-hover:scale-125 transition-transform" />
               Run Simulation
+              <kbd className="ml-2 text-[9px] opacity-50 hidden sm:inline">R</kbd>
             </>
           )}
         </Button>
       </motion.div>
     </div>
   );
-}
+});

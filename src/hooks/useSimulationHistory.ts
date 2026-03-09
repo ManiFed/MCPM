@@ -8,6 +8,7 @@ export interface HistoryEntry {
   id: string;
   timestamp: number;
   params: SimulationParams;
+  notes: string;
   summary: {
     expectedValue: number;
     medianOutcome: number;
@@ -42,6 +43,7 @@ export function useSimulationHistory() {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
       params,
+      notes: "",
       summary: {
         expectedValue: result.expectedValue,
         medianOutcome: result.medianOutcome,
@@ -53,9 +55,15 @@ export function useSimulationHistory() {
     setHistory((prev) => [entry, ...prev].slice(0, MAX_ENTRIES));
   }, []);
 
+  const updateNotes = useCallback((id: string, notes: string) => {
+    setHistory((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, notes } : e))
+    );
+  }, []);
+
   const clearHistory = useCallback(() => {
     setHistory([]);
   }, []);
 
-  return { history, addEntry, clearHistory };
+  return { history, addEntry, updateNotes, clearHistory };
 }

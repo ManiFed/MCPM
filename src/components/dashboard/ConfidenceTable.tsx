@@ -1,4 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import type { SimulationResult } from "@/types/simulation";
 
 interface ConfidenceTableProps {
@@ -22,8 +24,16 @@ export function ConfidenceTable({ result, bankroll }: ConfidenceTableProps) {
   return (
     <Card className="border-border/50 bg-card/80 backdrop-blur">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           Confidence Intervals
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-3 w-3 text-muted-foreground/40 hover:text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[240px] font-mono text-[10px]">
+              Shows the range of outcomes at different confidence levels. The 5th percentile is your downside scenario; the 95th is your upside.
+            </TooltipContent>
+          </Tooltip>
         </CardTitle>
       </CardHeader>
       <CardContent className="pb-4">
