@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -377,24 +378,34 @@ export function InputPanel({ onRunSimulation, isRunning, initialParams }: InputP
       )}
 
       {/* Run Button */}
-      <Button
-        onClick={handleRun}
-        disabled={isRunning}
-        className="w-full h-10 font-mono text-xs uppercase tracking-widest glow-green"
-        size="lg"
-      >
-        {isRunning ? (
-          <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Simulating...
-          </>
-        ) : (
-          <>
-            <Play className="h-3.5 w-3.5" />
-            Run Simulation
-          </>
-        )}
-      </Button>
+      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+        <Button
+          onClick={handleRun}
+          disabled={isRunning}
+          className="w-full h-11 font-mono text-xs uppercase tracking-widest glow-green relative overflow-hidden group"
+          size="lg"
+        >
+          {/* Animated shimmer */}
+          {!isRunning && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-primary-foreground/10 to-transparent -skew-x-12"
+              animate={{ x: ["-100%", "200%"] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+            />
+          )}
+          {isRunning ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Simulating...
+            </>
+          ) : (
+            <>
+              <Play className="h-3.5 w-3.5 group-hover:scale-125 transition-transform" />
+              Run Simulation
+            </>
+          )}
+        </Button>
+      </motion.div>
     </div>
   );
 }
