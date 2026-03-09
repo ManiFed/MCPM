@@ -59,6 +59,14 @@ export function RuinGauge({ probability, comparisonProbability }: RuinGaugeProps
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <motion.span
+              className="text-2xl"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 1, type: "spring", stiffness: 200 }}
+            >
+              {pct < 10 ? "😎" : pct < 30 ? "🤔" : pct < 60 ? "😰" : "💀"}
+            </motion.span>
+            <motion.span
               className="font-mono text-3xl font-bold"
               style={{ color }}
               initial={{ opacity: 0 }}
