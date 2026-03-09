@@ -106,28 +106,28 @@ const Index = () => {
                   Run thousands of Monte Carlo simulations on prediction markets to quantify your edge and manage risk.
                 </motion.p>
 
-                <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-                className="flex items-center justify-center gap-6 mt-6">
                 
-                  {[
-                { icon: Activity, label: "50K+ Sims", sub: "per run" },
-                { icon: Shield, label: "Ruin Analysis", sub: "built-in" },
-                { icon: BarChart3, label: "AI Insights", sub: "powered" }].
-                map((feat) =>
-                <div key={feat.label} className="flex items-center gap-2 text-left">
-                      <div className="p-2 rounded-lg bg-muted/50 border border-border/50">
-                        <feat.icon className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-mono text-xs font-semibold text-foreground">{feat.label}</div>
-                        <div className="font-mono text-[9px] text-muted-foreground">{feat.sub}</div>
-                      </div>
-                    </div>
-                )}
-                </motion.div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              
               </div>
             </motion.div> :
 
