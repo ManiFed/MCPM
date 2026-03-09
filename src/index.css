@@ -54,6 +54,54 @@
     --sidebar-border: 220 15% 16%;
     --sidebar-ring: 142 72% 50%;
   }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 220 20% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 15%;
+
+    --primary: 142 72% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 20% 30%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 45 100% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 85% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 142 72% 40%;
+
+    --profit: 142 72% 35%;
+    --loss: 0 85% 50%;
+    --neutral: 45 100% 45%;
+    --chart-1: 142 72% 40%;
+    --chart-2: 45 100% 45%;
+    --chart-3: 0 85% 50%;
+    --chart-4: 200 80% 45%;
+    --chart-5: 280 70% 50%;
+
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 220 20% 25%;
+    --sidebar-primary: 142 72% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 92%;
+    --sidebar-accent-foreground: 220 20% 30%;
+    --sidebar-border: 220 15% 88%;
+    --sidebar-ring: 142 72% 40%;
+  }
 }
 
 @layer base {
@@ -88,6 +136,13 @@
     background-image: 
       linear-gradient(hsl(142 72% 50% / 0.03) 1px, transparent 1px),
       linear-gradient(90deg, hsl(142 72% 50% / 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .light .terminal-grid {
+    background-image: 
+      linear-gradient(hsl(220 15% 85% / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(220 15% 85% / 0.5) 1px, transparent 1px);
     background-size: 20px 20px;
   }
 

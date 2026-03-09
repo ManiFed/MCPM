@@ -1,8 +1,18 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, BarChart3, Target, OctagonX } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, Target, OctagonX, Info } from "lucide-react";
 import { motion } from "framer-motion";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SimulationResult } from "@/types/simulation";
 import { useCountUp } from "@/hooks/useCountUp";
+
+const STAT_TOOLTIPS: Record<string, string> = {
+  "Expected Value": "The average outcome across all simulations. If this exceeds your bankroll, you have a positive expected return.",
+  "Median Outcome": "The middle outcome — 50% of simulations end above this, 50% below. More reliable than the mean for skewed distributions.",
+  "Sharpe Ratio": "Return per unit of risk. Above 0.5 is decent, above 1.0 is strong, above 2.0 is exceptional.",
+  "Max Drawdown": "The largest peak-to-trough decline observed. Lower is better — above 50% is severe.",
+  "Hit Target": "Percentage of simulations that reached your profit target before the run ended.",
+  "Hit Stop": "Percentage of simulations that hit your stop loss before the run ended.",
+};
 
 interface StatCardProps {
   label: string;
@@ -31,6 +41,8 @@ function AnimatedStatCard({ label, rawValue, formattedPrefix = "", formattedSuff
     return animatedValue.toFixed(decimals);
   };
 
+  const tooltip = STAT_TOOLTIPS[label];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -40,7 +52,6 @@ function AnimatedStatCard({ label, rawValue, formattedPrefix = "", formattedSuff
     >
       <Card className={`border-border/50 bg-card/80 backdrop-blur overflow-hidden relative group cursor-default hover:border-${positive ? "profit" : "loss"}/30 transition-all duration-300`}>
         <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${positive ? "bg-profit/[0.03]" : "bg-loss/[0.03]"}`} />
-        {/* Animated shine effect */}
         <motion.div
           className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/[0.04] to-transparent -skew-x-12"
           initial={{ x: "-100%" }}
@@ -49,9 +60,21 @@ function AnimatedStatCard({ label, rawValue, formattedPrefix = "", formattedSuff
         />
         <CardContent className="p-4 relative">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-              {label}
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                {label}
+              </span>
+              {tooltip && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 text-muted-foreground/40 hover:text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] font-mono text-[10px]">
+                    {tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
             <motion.div
               className={`p-1 rounded ${positive ? "bg-profit/10" : "bg-loss/10"}`}
               whileHover={{ rotate: [0, -10, 10, 0], scale: 1.2 }}
@@ -60,10 +83,7 @@ function AnimatedStatCard({ label, rawValue, formattedPrefix = "", formattedSuff
               <Icon className={`h-3 w-3 ${positive ? "text-profit" : "text-loss"}`} />
             </motion.div>
           </div>
-          <motion.div
-            className="font-mono text-xl font-bold text-card-foreground"
-            key={rawValue}
-          >
+          <motion.div className="font-mono text-xl font-bold text-card-foreground" key={rawValue}>
             {formatAnimated()}
           </motion.div>
           <div className="flex items-center gap-2 mt-1.5">

@@ -17,8 +17,10 @@ import { StreakAnalysis } from "./dashboard/StreakAnalysis";
 import { Confetti } from "./Confetti";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Activity, Download, Lock, X } from "lucide-react";
+import { Activity, Download, FileText, Lock, X } from "lucide-react";
 import { exportResultsToCSV } from "@/lib/csvExport";
+import { exportDashboardToPDF } from "@/lib/pdfExport";
+import { toast } from "sonner";
 
 const LOADING_QUOTES = [
   "Rolling the dice 10,000 times...",
@@ -47,7 +49,6 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
   const [showConfetti, setShowConfetti] = useState(false);
   const [quoteIndex, setQuoteIndex] = useState(0);
 
-  // Rotate quotes while loading
   useEffect(() => {
     if (!isRunning) return;
     setQuoteIndex(Math.floor(Math.random() * LOADING_QUOTES.length));
@@ -57,7 +58,6 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  // Confetti on profitable result
   useEffect(() => {
     if (result && params && result.expectedValue > params.bankroll && result.probabilityOfRuin < 0.2) {
       setShowConfetti(true);
@@ -75,6 +75,15 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
     if (roi > -0.1) return { emoji: "⚠️", text: "Marginal edge", color: "text-accent" };
     return { emoji: "💀", text: "Negative expectation", color: "text-loss" };
   }, [result, params]);
+
+  const handleExportPDF = async () => {
+    try {
+      await exportDashboardToPDF("results-dashboard", params?.marketTitle ? `MCPM — ${params.marketTitle}` : "MCPM Simulation Report");
+      toast.success("PDF report opened in new tab");
+    } catch {
+      toast.error("Failed to generate PDF — allow popups and retry");
+    }
+  };
 
   if (isRunning) {
     return (
@@ -103,10 +112,7 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
           <Progress value={progress * 100} className="h-2" />
           <div className="flex justify-between font-mono text-[10px] text-muted-foreground">
             <span>{Math.round(progress * 100)}%</span>
-            <motion.span
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
+            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }}>
               ████░░░░
             </motion.span>
           </div>
@@ -120,25 +126,16 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
       <div className="flex items-center justify-center h-full min-h-[400px]">
         <div className="text-center space-y-4">
           <motion.div
-            animate={{ 
-              opacity: [0.15, 0.3, 0.15],
-              scale: [1, 1.05, 1],
-              rotate: [0, 5, -5, 0],
-            }}
+            animate={{ opacity: [0.15, 0.3, 0.15], scale: [1, 1.05, 1], rotate: [0, 5, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             className="font-mono text-7xl text-muted-foreground/20"
           >
             ⟐
           </motion.div>
           <div>
-            <p className="font-mono text-sm text-muted-foreground">
-              Configure parameters and run a simulation
-            </p>
-            <p className="font-mono text-xs text-muted-foreground/50 mt-1">
-              Results will appear here with charts & AI analysis
-            </p>
+            <p className="font-mono text-sm text-muted-foreground">Configure parameters and run a simulation</p>
+            <p className="font-mono text-xs text-muted-foreground/50 mt-1">Results will appear here with charts & AI analysis</p>
           </div>
-          {/* Animated hint dots */}
           <div className="flex items-center justify-center gap-1.5 pt-2">
             {[0, 1, 2].map((i) => (
               <motion.div
@@ -158,6 +155,7 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
     <>
       <Confetti trigger={showConfetti} />
       <motion.div
+        id="results-dashboard"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
@@ -212,12 +210,20 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
               <Download className="h-3 w-3" />
               CSV
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 font-mono text-[10px] gap-1.5"
+              onClick={handleExportPDF}
+            >
+              <FileText className="h-3 w-3" />
+              PDF
+            </Button>
             <ShareModal params={params} result={result} />
           </div>
         </div>
 
         <SummaryStats result={result} bankroll={params.bankroll} comparisonResult={comparisonResult} />
-
         <RiskMetrics result={result} bankroll={params.bankroll} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -228,9 +234,7 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
         </div>
 
         <EquityFanChart equityCurves={result.equityCurves} comparisonCurves={comparisonResult?.equityCurves} />
-
         <DrawdownChart equityCurves={result.equityCurves} />
-
         <EquityReplay equityCurves={result.equityCurves} bankroll={params.bankroll} />
 
         {result.streaks && <StreakAnalysis streaks={result.streaks} />}
@@ -241,7 +245,6 @@ export function ResultsDashboard({ result, isRunning, progress, params, comparis
         </div>
 
         <SensitivityHeatmap params={params} />
-
         <AIAnalysisPanel params={params} result={result} />
       </motion.div>
     </>

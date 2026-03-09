@@ -1,9 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ShieldAlert, TrendingDown, Target, Award, Percent } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ChevronDown, ShieldAlert, TrendingDown, Target, Award, Percent, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useMemo } from "react";
 import type { SimulationResult } from "@/types/simulation";
+
+const METRIC_TOOLTIPS: Record<string, string> = {
+  "VaR (5%)": "Value at Risk: 95% of the time your return will be better than this. Think of it as the 'bad day' scenario.",
+  "VaR (1%)": "Extreme Value at Risk: 99% of the time your return will be better than this. The 'worst case' scenario.",
+  "CVaR (5%)": "Conditional VaR: The average loss in the worst 5% of outcomes. Shows how bad things get when they go wrong.",
+  "Sortino": "Like Sharpe but only penalizes downside volatility. Higher is better — above 1.0 is strong.",
+  "Calmar": "Annual return divided by max drawdown. Higher means better risk-adjusted returns.",
+  "Win Rate": "How often you end up with more money than you started. Above 50% is generally good.",
+  "Profit Factor": "Total profits divided by total losses. Above 1.5 is good, above 2.0 is excellent.",
+};
 
 interface RiskMetricsProps {
   result: SimulationResult;
@@ -20,7 +31,6 @@ function computeAdvancedMetrics(finalValues: number[], equityCurves: number[][],
   const var5 = pct(5);
   const var1 = pct(1);
 
-  // CVaR (Expected Shortfall) at 5%
   const cutoff5 = Math.floor(0.05 * n);
   const tail5 = sorted.slice(0, cutoff5);
   const cvar5 = tail5.length > 0 ? tail5.reduce((s, v) => s + v, 0) / tail5.length : 0;
@@ -29,7 +39,6 @@ function computeAdvancedMetrics(finalValues: number[], equityCurves: number[][],
   const tail1 = sorted.slice(0, Math.max(1, cutoff1));
   const cvar1 = tail1.reduce((s, v) => s + v, 0) / tail1.length;
 
-  // Sortino Ratio
   const meanReturn = returns.reduce((s, v) => s + v, 0) / n;
   const downside = returns.filter(r => r < 0);
   const downsideVariance = downside.length > 0
@@ -38,7 +47,6 @@ function computeAdvancedMetrics(finalValues: number[], equityCurves: number[][],
   const downsideDev = Math.sqrt(downsideVariance);
   const sortino = downsideDev > 0 ? meanReturn / downsideDev : 0;
 
-  // Max Drawdown from curves
   let maxDD = 0;
   for (const curve of equityCurves) {
     let peak = curve[0] ?? 0;
@@ -49,14 +57,10 @@ function computeAdvancedMetrics(finalValues: number[], equityCurves: number[][],
     }
   }
 
-  // Calmar Ratio
   const calmar = maxDD > 0 ? meanReturn / maxDD : 0;
-
-  // Win rate
   const wins = finalValues.filter(v => v > bankroll).length;
   const winRate = wins / n;
 
-  // Profit factor
   const grossProfit = returns.filter(r => r > 0).reduce((s, v) => s + v, 0);
   const grossLoss = Math.abs(returns.filter(r => r < 0).reduce((s, v) => s + v, 0));
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : Infinity;
@@ -73,13 +77,13 @@ export function RiskMetrics({ result, bankroll }: RiskMetricsProps) {
   );
 
   const items = [
-    { label: "VaR (5%)", value: `${(metrics.var5 * 100).toFixed(1)}%`, icon: ShieldAlert, desc: "Max loss at 5th percentile", bad: metrics.var5 < -0.2 },
-    { label: "VaR (1%)", value: `${(metrics.var1 * 100).toFixed(1)}%`, icon: ShieldAlert, desc: "Max loss at 1st percentile", bad: metrics.var1 < -0.5 },
-    { label: "CVaR (5%)", value: `${(metrics.cvar5 * 100).toFixed(1)}%`, icon: TrendingDown, desc: "Expected shortfall beyond VaR", bad: metrics.cvar5 < -0.3 },
-    { label: "Sortino", value: metrics.sortino.toFixed(2), icon: Target, desc: "Return per unit downside risk", bad: metrics.sortino < 0.5 },
-    { label: "Calmar", value: metrics.calmar.toFixed(2), icon: Award, desc: "Return / Max Drawdown", bad: metrics.calmar < 0.5 },
-    { label: "Win Rate", value: `${(metrics.winRate * 100).toFixed(1)}%`, icon: Percent, desc: "Simulations ending in profit", bad: metrics.winRate < 0.5 },
-    { label: "Profit Factor", value: metrics.profitFactor === Infinity ? "∞" : metrics.profitFactor.toFixed(2), icon: TrendingDown, desc: "Gross profit / Gross loss", bad: metrics.profitFactor < 1 },
+    { label: "VaR (5%)", value: `${(metrics.var5 * 100).toFixed(1)}%`, icon: ShieldAlert, bad: metrics.var5 < -0.2 },
+    { label: "VaR (1%)", value: `${(metrics.var1 * 100).toFixed(1)}%`, icon: ShieldAlert, bad: metrics.var1 < -0.5 },
+    { label: "CVaR (5%)", value: `${(metrics.cvar5 * 100).toFixed(1)}%`, icon: TrendingDown, bad: metrics.cvar5 < -0.3 },
+    { label: "Sortino", value: metrics.sortino.toFixed(2), icon: Target, bad: metrics.sortino < 0.5 },
+    { label: "Calmar", value: metrics.calmar.toFixed(2), icon: Award, bad: metrics.calmar < 0.5 },
+    { label: "Win Rate", value: `${(metrics.winRate * 100).toFixed(1)}%`, icon: Percent, bad: metrics.winRate < 0.5 },
+    { label: "Profit Factor", value: metrics.profitFactor === Infinity ? "∞" : metrics.profitFactor.toFixed(2), icon: TrendingDown, bad: metrics.profitFactor < 1 },
   ];
 
   return (
@@ -110,11 +114,20 @@ export function RiskMetrics({ result, bankroll }: RiskMetricsProps) {
                   <div className="flex items-center gap-1.5 mb-1">
                     <item.icon className={`h-3 w-3 ${item.bad ? "text-loss" : "text-profit"}`} />
                     <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{item.label}</span>
+                    {METRIC_TOOLTIPS[item.label] && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-2.5 w-2.5 text-muted-foreground/40 hover:text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[220px] font-mono text-[10px]">
+                          {METRIC_TOOLTIPS[item.label]}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                   <div className={`font-mono text-lg font-bold ${item.bad ? "text-loss" : "text-profit"}`}>
                     {item.value}
                   </div>
-                  <div className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">{item.desc}</div>
                 </motion.div>
               ))}
             </div>

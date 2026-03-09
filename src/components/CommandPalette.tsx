@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { FlaskConical, History, Layers, BookOpen, Download, Trash2, Zap } from "lucide-react";
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import { FlaskConical, History, Layers, BookOpen, Download, Trash2, Zap, Keyboard, TrendingUp } from "lucide-react";
 
 interface CommandPaletteProps {
   onRunSimulation?: () => void;
@@ -41,6 +41,10 @@ export function CommandPalette({ onRunSimulation, onExportCSV, onClearResults }:
             <FlaskConical className="mr-2 h-4 w-4" />
             Simulator
           </CommandItem>
+          <CommandItem onSelect={() => runAction(() => navigate("/markets"))} className="font-mono text-sm">
+            <TrendingUp className="mr-2 h-4 w-4" />
+            Markets
+          </CommandItem>
           <CommandItem onSelect={() => runAction(() => navigate("/backtest"))} className="font-mono text-sm">
             <History className="mr-2 h-4 w-4" />
             Backtest
@@ -73,6 +77,19 @@ export function CommandPalette({ onRunSimulation, onExportCSV, onClearResults }:
               Clear Results
             </CommandItem>
           )}
+        </CommandGroup>
+        <CommandSeparator />
+        <CommandGroup heading="Keyboard Shortcuts">
+          <CommandItem className="font-mono text-xs text-muted-foreground pointer-events-none">
+            <Keyboard className="mr-2 h-4 w-4" />
+            <div className="flex flex-col gap-0.5">
+              <span><kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">R</kbd> Run simulation</span>
+              <span><kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">L</kbd> Lock & Compare</span>
+              <span><kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">1-4</kbd> Apply preset</span>
+              <span><kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">Esc</kbd> Clear comparison</span>
+              <span><kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">⌘K</kbd> Command palette</span>
+            </div>
+          </CommandItem>
         </CommandGroup>
       </CommandList>
     </CommandDialog>

@@ -1,7 +1,9 @@
-import { Clock, Trash2, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { Clock, Trash2, RotateCcw, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Textarea } from "@/components/ui/textarea";
 import type { SimulationParams } from "@/types/simulation";
 import type { HistoryEntry } from "@/hooks/useSimulationHistory";
 
@@ -9,9 +11,12 @@ interface SimulationHistoryProps {
   history: HistoryEntry[];
   onRerun: (params: SimulationParams) => void;
   onClear: () => void;
+  onUpdateNotes?: (id: string, notes: string) => void;
 }
 
-export function SimulationHistory({ history, onRerun, onClear }: SimulationHistoryProps) {
+export function SimulationHistory({ history, onRerun, onClear, onUpdateNotes }: SimulationHistoryProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   if (history.length === 0) return null;
 
   const formatTime = (ts: number) => {
@@ -46,41 +51,65 @@ export function SimulationHistory({ history, onRerun, onClear }: SimulationHisto
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="pt-0 pb-3 space-y-1.5 max-h-[200px] overflow-y-auto">
+          <CardContent className="pt-0 pb-3 space-y-1.5 max-h-[300px] overflow-y-auto">
             {history.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-center justify-between rounded border border-border/30 bg-background/50 px-2.5 py-1.5 group"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] text-muted-foreground">
-                      {formatTime(entry.timestamp)}
-                    </span>
-                    <span className="font-mono text-[10px] text-primary truncate">
-                      {entry.params.marketTitle || `${Math.round(entry.params.probability * 100)}% · ${entry.params.leverage}x`}
-                    </span>
+              <div key={entry.id} className="space-y-1">
+                <div className="flex items-center justify-between rounded border border-border/30 bg-background/50 px-2.5 py-1.5 group">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {formatTime(entry.timestamp)}
+                      </span>
+                      <span className="font-mono text-[10px] text-primary truncate">
+                        {entry.params.marketTitle || `${Math.round(entry.params.probability * 100)}% · ${entry.params.leverage}x`}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 mt-0.5">
+                      <span className="font-mono text-[9px] text-muted-foreground">
+                        EV {formatCurrency(entry.summary.expectedValue)}
+                      </span>
+                      <span className="font-mono text-[9px] text-muted-foreground">
+                        Ruin {(entry.summary.probabilityOfRuin * 100).toFixed(1)}%
+                      </span>
+                      <span className="font-mono text-[9px] text-muted-foreground">
+                        Sharpe {entry.summary.sharpeRatio.toFixed(2)}
+                      </span>
+                    </div>
+                    {entry.notes && editingId !== entry.id && (
+                      <p className="font-mono text-[9px] text-accent/70 mt-0.5 truncate">📝 {entry.notes}</p>
+                    )}
                   </div>
-                  <div className="flex gap-3 mt-0.5">
-                    <span className="font-mono text-[9px] text-muted-foreground">
-                      EV {formatCurrency(entry.summary.expectedValue)}
-                    </span>
-                    <span className="font-mono text-[9px] text-muted-foreground">
-                      Ruin {(entry.summary.probabilityOfRuin * 100).toFixed(1)}%
-                    </span>
-                    <span className="font-mono text-[9px] text-muted-foreground">
-                      Sharpe {entry.summary.sharpeRatio.toFixed(2)}
-                    </span>
+                  <div className="flex items-center gap-1">
+                    {onUpdateNotes && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-accent"
+                        onClick={() => setEditingId(editingId === entry.id ? null : entry.id)}
+                      >
+                        <StickyNote className="h-3 w-3" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-primary"
+                      onClick={() => onRerun(entry.params)}
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-primary"
-                  onClick={() => onRerun(entry.params)}
-                >
-                  <RotateCcw className="h-3 w-3" />
-                </Button>
+                {editingId === entry.id && onUpdateNotes && (
+                  <Textarea
+                    value={entry.notes}
+                    onChange={(e) => onUpdateNotes(entry.id, e.target.value)}
+                    placeholder="Add notes about this scenario..."
+                    className="font-mono text-[10px] min-h-[50px] h-[50px] bg-background/50 border-border/30"
+                    onBlur={() => setEditingId(null)}
+                    autoFocus
+                  />
+                )}
               </div>
             ))}
           </CardContent>
